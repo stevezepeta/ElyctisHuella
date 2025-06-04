@@ -1,11 +1,12 @@
 // src/main/java/gruposantoro/elyctishuella/service/PersonService.java
 package gruposantoro.elyctishuella.service;
 
-import gruposantoro.elyctishuella.model.dto.PersonDTO;
+import org.springframework.stereotype.Service;
+
 import gruposantoro.elyctishuella.model.Person;
+import gruposantoro.elyctishuella.model.dto.PersonDTO;
 import gruposantoro.elyctishuella.repository.PersonRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -13,7 +14,12 @@ public class PersonService {
 
     private final PersonRepository personRepository;
 
-    public Person registerPerson(PersonDTO dto) {
+     public Person registerPerson(PersonDTO dto) {
+        // Verifica si la CURP ya existe
+        if (personRepository.findByCurp(dto.getCurp()).isPresent()) {
+            throw new IllegalArgumentException("La CURP ya está registrada.");
+        }
+
         Person person = new Person();
         person.setCurp(dto.getCurp());
         person.setNombres(dto.getNombres());

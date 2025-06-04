@@ -13,17 +13,19 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import gruposantoro.elyctishuella.model.dto.huellas.EnrollBiometricDataDTO;
 import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.model.dto.EnrollPersonDTO;
+import gruposantoro.elyctishuella.model.dto.huellas.EnrollBiometricDataDTO;
 import gruposantoro.elyctishuella.model.dto.huellas.PersonEnrolledDTO;
+import gruposantoro.elyctishuella.repository.PersonRepository;
 import gruposantoro.elyctishuella.rulesException.EnrollException;
 import gruposantoro.elyctishuella.rulesException.ModelNotFoundException;
 import gruposantoro.elyctishuella.service.EnrollCustomerService;
+import gruposantoro.elyctishuella.service.FingerprintService;
 import gruposantoro.elyctishuella.util.Message;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -33,7 +35,8 @@ public class EnrollCustomerController {
 
     private final ObjectMapper objectMapper;
     private final EnrollCustomerService enrollCustomerService;
-
+ private final FingerprintService fingerprintService;
+    private final PersonRepository personRepository;
     @PostMapping("/enroll/biographic")
     public ResponseEntity<Message> enrollBiographic(@RequestBody @Valid EnrollPersonDTO enrollPersonDTO) {
         Person personSaved = enrollCustomerService.enrollBiographic(enrollPersonDTO);
@@ -57,7 +60,7 @@ public class EnrollCustomerController {
         );
     }
 
-    @PostMapping("/enroll/fingerprint")
+   @PostMapping("/enroll/fingerprint")
     public ResponseEntity<Message> enrollBiometric(
             @RequestParam Map<String, MultipartFile> filesBiometric,
             @RequestParam("info") @NotNull @NotBlank String info
@@ -71,5 +74,5 @@ public class EnrollCustomerController {
         return ResponseEntity.ok(
             new Message(true, "Biometric data enrolled successfully", null)
         );
-    }
+}
 }

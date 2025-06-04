@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,10 @@ import com.machinezoo.sourceafis.FingerprintImageOptions;
 import com.machinezoo.sourceafis.FingerprintMatcher;
 import com.machinezoo.sourceafis.FingerprintTemplate;
 
+import gruposantoro.elyctishuella.model.FingerPrint;
+import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.model.dto.huellas.FingerprintDataDTO;
 import gruposantoro.elyctishuella.model.dto.huellas.FingerprintResultDTO;
-import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.repository.FingerPrintRepository;
 import gruposantoro.elyctishuella.repository.PersonRepository;
 import lombok.extern.log4j.Log4j2;
@@ -126,6 +128,56 @@ public class FingerprintService {
         return dto;
     }
 
+    // ==== MÉTODO PARA VERIFICAR MATCH DE HUELLAS ====
+    public Person verifyBiometric(String curp, Map<String, MultipartFile> filesBiometric) throws IOException {
+        Optional<Person> personOpt = personRepository.findByCurp(curp);
+        if (personOpt.isEmpty()) return null;
+        Person person = personOpt.get();
+
+        Optional<FingerPrint> fingerPrintOpt = fingerPrintRepository.findByPerson(person);
+        if (fingerPrintOpt.isEmpty()) return null;
+        FingerPrint fingerprints = fingerPrintOpt.get();
+
+        String[] fingerKeys = {
+            "thumbLeft", "indexLeft", "middleLeft", "ringLeft", "littleLeft",
+            "thumbRight", "indexRight", "middleRight", "ringRight", "littleRight"
+        };
+
+        for (String finger : fingerKeys) {
+            MultipartFile file = filesBiometric.get(finger);
+            String storedFingerprintPath = getFingerprintPath(fingerprints, finger);
+
+            if (file != null && !file.isEmpty() && storedFingerprintPath != null) {
+                String uploadedBase64 = fileToBase64(file);
+                String storedBase64 = filePathToBase64(storedFingerprintPath);
+                if (uploadedBase64 != null && storedBase64 != null) {
+                    FingerprintResultDTO result = compareFingerprints(uploadedBase64, storedBase64, false);
+                    if (result != null && result.isMatch()) {
+                        return person; // Retorna la persona que hizo match
+                    }
+                }
+            }
+        }
+        return null; // Si no hubo coincidencias
+    }
+
+    // Utilitario: obtiene la ruta del archivo guardado para cada dedo
+    private String getFingerprintPath(FingerPrint fingerprints, String finger) {
+        switch (finger) {
+            case "thumbLeft": return fingerprints.getThumbLeft();
+            case "indexLeft": return fingerprints.getIndexLeft();
+            case "middleLeft": return fingerprints.getMiddleLeft();
+            case "ringLeft": return fingerprints.getRingLeft();
+            case "littleLeft": return fingerprints.getLittleLeft();
+            case "thumbRight": return fingerprints.getThumbRight();
+            case "indexRight": return fingerprints.getIndexRight();
+            case "middleRight": return fingerprints.getMiddleRight();
+            case "ringRight": return fingerprints.getRingRight();
+            case "littleRight": return fingerprints.getLittleRight();
+            default: return null;
+        }
+    }
+
     // Guarda o actualiza la foto de rostro y retorna la ruta
     public String saveOrUpdateFacePhoto(Person person, MultipartFile facePhoto) {
         try {
@@ -138,16 +190,12 @@ public class FingerprintService {
                 try (FileOutputStream fos = new FileOutputStream(path)) {
                     fos.write(facePhoto.getBytes());
                 }
-                // Si tienes un campo en Person para la ruta, actualízalo
-                // person.setFacePhoto(path);
-                // personRepository.save(person);
                 log.info("Foto facial guardada/actualizada en: {}", path);
                 return path;
             }
         } catch (Exception e) {
             log.error("No se pudo guardar la foto facial para la persona: {}", person.getCurp(), e);
         }
-        // return person.getFacePhoto(); // Si tienes campo en Person
         return null;
     }
 }
