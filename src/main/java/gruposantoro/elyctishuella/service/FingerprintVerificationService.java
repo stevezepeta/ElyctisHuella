@@ -15,9 +15,9 @@ import com.machinezoo.sourceafis.FingerprintImageOptions;
 import com.machinezoo.sourceafis.FingerprintMatcher;
 import com.machinezoo.sourceafis.FingerprintTemplate;
 
-import gruposantoro.elyctishuella.model.dto.huellas.FingerprintResultDTO;
 import gruposantoro.elyctishuella.model.FingerPrint;
 import gruposantoro.elyctishuella.model.Person;
+import gruposantoro.elyctishuella.model.dto.huellas.FingerprintResultDTO;
 import gruposantoro.elyctishuella.repository.FingerPrintRepository;
 import gruposantoro.elyctishuella.repository.PersonRepository;
 import lombok.extern.slf4j.Slf4j;

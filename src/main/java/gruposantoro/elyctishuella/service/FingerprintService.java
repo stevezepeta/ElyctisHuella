@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,8 +41,6 @@ public class FingerprintService {
     private final BigDecimal MAX_PERCENTAGE = new BigDecimal("100.00");
     private final BigDecimal MULTIPLIER = MAX_PERCENTAGE.divide(MAX_SCORE, RoundingMode.HALF_DOWN);
 
-    private final Base64.Decoder decoder64 = Base64.getDecoder();
-
     // Constructor con @Value para inyectar propiedades
     public FingerprintService(
             @Value("${guyana.threshold:80}") short threshold,
@@ -67,16 +64,10 @@ public class FingerprintService {
         // (asocia huellas al person y guarda imágenes usando filesFingerprint)
     }
 
-    private String fileToBase64(MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) return null;
-        return Base64.getEncoder().encodeToString(file.getBytes());
-    }
-
-    // Convierte una ruta de archivo a base64
-    private String filePathToBase64(String filePath) {
+    // Convierte una ruta de archivo a bytes
+    private byte[] filePathToBytes(String filePath) {
         try {
-            byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
-            return Base64.getEncoder().encodeToString(fileContent);
+            return Files.readAllBytes(Paths.get(filePath));
         } catch (Exception e) {
             log.error("No se pudo leer la imagen desde la ruta: " + filePath, e);
             return null;
@@ -84,48 +75,40 @@ public class FingerprintService {
     }
 
     /**
-     * Compara dos huellas en base64 (o una como ruta) y devuelve el DTO resultado.
+     * Compara dos huellas (ambas en bytes) y devuelve el DTO resultado.
      * Si no hacen match, retorna null.
      */
-    public FingerprintResultDTO compareFingerprints(String fingerprint1Base64, String fingerprint2PathOrBase64, boolean isStoredPath) {
-        String fingerprint2Base64 = fingerprint2PathOrBase64;
-        if (isStoredPath) {
-            fingerprint2Base64 = filePathToBase64(fingerprint2PathOrBase64);
-            if (fingerprint2Base64 == null) {
-                log.warn("No se pudo convertir la ruta a base64: {}", fingerprint2PathOrBase64);
+    public FingerprintResultDTO compareFingerprints(byte[] fingerprint1Bytes, byte[] fingerprint2Bytes) {
+        try {
+            var options = new FingerprintImageOptions().dpi(500);
+
+            var image1 = new FingerprintImage(fingerprint1Bytes, options);
+            var template1 = new FingerprintTemplate(image1);
+
+            var image2 = new FingerprintImage(fingerprint2Bytes, options);
+            var template2 = new FingerprintTemplate(image2);
+
+            FingerprintMatcher matcher = new FingerprintMatcher(template1);
+            BigDecimal score = BigDecimal.valueOf(matcher.match(template2));
+
+            boolean isMatch = score.compareTo(THRESHOLD) > 0;
+
+            BigDecimal scoreAux = score.compareTo(MAX_SCORE) > 0 ? MAX_SCORE : score;
+            BigDecimal percentage = scoreAux.multiply(MULTIPLIER).setScale(2, RoundingMode.HALF_DOWN);
+
+            if (!isMatch) {
                 return null;
             }
-        }
 
-        byte[] fingerprint1 = decoder64.decode(fingerprint1Base64);
-        byte[] fingerprint2 = decoder64.decode(fingerprint2Base64);
-
-        var options = new FingerprintImageOptions().dpi(500);
-
-        var image1 = new FingerprintImage(fingerprint1, options);
-        var template1 = new FingerprintTemplate(image1);
-
-        var image2 = new FingerprintImage(fingerprint2, options);
-        var template2 = new FingerprintTemplate(image2);
-
-        FingerprintMatcher matcher = new FingerprintMatcher(template1);
-        BigDecimal score = BigDecimal.valueOf(matcher.match(template2));
-
-        boolean isMatch = score.compareTo(THRESHOLD) > 0;
-
-        BigDecimal scoreAux = score.compareTo(MAX_SCORE) > 0 ? MAX_SCORE : score;
-        BigDecimal percentage = scoreAux.multiply(MULTIPLIER).setScale(2, RoundingMode.HALF_DOWN);
-
-        if (!isMatch) {
+            FingerprintResultDTO dto = new FingerprintResultDTO();
+            dto.setMatch(true);
+            dto.setScore(score);
+            dto.setPercentage(percentage);
+            return dto;
+        } catch (Exception e) {
+            log.error("Error comparando huellas dactilares: ", e);
             return null;
         }
-
-        // Retorna DTO con resultados
-        FingerprintResultDTO dto = new FingerprintResultDTO();
-        dto.setMatch(true);
-        dto.setScore(score);
-        dto.setPercentage(percentage);
-        return dto;
     }
 
     // ==== MÉTODO PARA VERIFICAR MATCH DE HUELLAS ====
@@ -144,14 +127,15 @@ public class FingerprintService {
         };
 
         for (String finger : fingerKeys) {
-            MultipartFile file = filesBiometric.get(finger);
+            MultipartFile uploadedFile = filesBiometric.get(finger);
             String storedFingerprintPath = getFingerprintPath(fingerprints, finger);
 
-            if (file != null && !file.isEmpty() && storedFingerprintPath != null) {
-                String uploadedBase64 = fileToBase64(file);
-                String storedBase64 = filePathToBase64(storedFingerprintPath);
-                if (uploadedBase64 != null && storedBase64 != null) {
-                    FingerprintResultDTO result = compareFingerprints(uploadedBase64, storedBase64, false);
+            // Solo si hay huella recibida y guardada
+            if (uploadedFile != null && !uploadedFile.isEmpty() && storedFingerprintPath != null) {
+                byte[] uploadedBytes = uploadedFile.getBytes();
+                byte[] storedBytes = filePathToBytes(storedFingerprintPath);
+                if (uploadedBytes != null && storedBytes != null) {
+                    FingerprintResultDTO result = compareFingerprints(uploadedBytes, storedBytes);
                     if (result != null && result.isMatch()) {
                         return person; // Retorna la persona que hizo match
                     }
