@@ -1,6 +1,7 @@
 package gruposantoro.elyctishuella.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,6 +53,12 @@ public ResponseEntity<List<ScanLog>> filterLogs(
     List<ScanLog> result = scanLogService.searchLogs(filter);
     return ResponseEntity.ok(result);
 }
+@GetMapping("/calendar")
+public ResponseEntity<?> getFullLogCalendar() {
+    Map<String, List<Integer>> calendar = scanLogService.getFullCalendarGroupedByMonth();
+    return ResponseEntity.ok(calendar);
+}
+
 
 
 }

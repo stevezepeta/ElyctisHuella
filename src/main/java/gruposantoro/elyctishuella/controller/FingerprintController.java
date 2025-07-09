@@ -59,11 +59,6 @@ public class FingerprintController {
             }
             log.info("Registro de huella encontrado para persona: {}", curp);
 
-            // --- LOG EXTRA: Mostrar rutas de huellas guardadas ---
-            log.info("Paths de huellas almacenadas para el usuario:");
-            log.info("thumbLeft: {}", fingerPrint.getThumbLeft());
-            log.info("indexRight: {}", fingerPrint.getIndexRight());
-
             String[] fingerKeys = {
                 "thumbLeft", "indexLeft", "middleLeft", "ringLeft", "littleLeft",
                 "thumbRight", "indexRight", "middleRight", "ringRight", "littleRight"
@@ -117,13 +112,12 @@ public class FingerprintController {
             nombreCompleto = nombreCompleto.trim();
 
             FingerprintVerificationResponseDTO response = new FingerprintVerificationResponseDTO();
-            response.setMatch(matchFound); // true o false según resultado
-            response.setNombreCompleto(matchFound ? nombreCompleto : "");
 
             if (!atLeastOneFingerPresent) {
                 log.warn("No se recibió ninguna huella digital para verificar.");
                 response.setMatch(false);
                 response.setNombreCompleto("");
+                response.setId(null);
                 return ResponseEntity.ok(response);
             }
 
@@ -131,11 +125,16 @@ public class FingerprintController {
                 log.warn("NO hubo match entre huellas para CURP {} en ninguno de los 10 dedos", curp);
                 response.setMatch(false);
                 response.setNombreCompleto("");
+                response.setId(null);
                 return ResponseEntity.ok(response);
             }
 
             log.info("¡MATCH exitoso! Dedo: {} - Score: {}, Porcentaje: {}",
                     matchedFinger, matchResult.getScore(), matchResult.getPercentage());
+
+            response.setMatch(true);
+            response.setNombreCompleto(nombreCompleto);
+            response.setId(person.getId());
 
             return ResponseEntity.ok(response);
 
@@ -145,7 +144,6 @@ public class FingerprintController {
         }
     }
 
-    // Utilitario: obtiene la ruta del archivo guardado para cada dedo
     private String getFingerprintPath(FingerPrint fingerPrint, String finger) {
         switch (finger) {
             case "thumbLeft": return fingerPrint.getThumbLeft();

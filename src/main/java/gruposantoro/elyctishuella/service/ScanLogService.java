@@ -1,10 +1,15 @@
 package gruposantoro.elyctishuella.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.springframework.stereotype.Service;
 
@@ -33,80 +38,117 @@ public class ScanLogService {
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public void saveLog(ScanLogRequestDTO request) {
+ public void saveLog(ScanLogRequestDTO request) {
+    LocalDateTime scanDateTime;
+    try {
+        scanDateTime = LocalDateTime.parse(request.getScanDate(), formatter);
+    } catch (DateTimeParseException e) {
+        throw new RuntimeException("Formato inválido de scanDate. Usa: yyyy-MM-dd HH:mm:ss");
+    }
+
+    ScanLog log = new ScanLog();
+    log.setDate(scanDateTime);
+    log.setType(request.getType());
+    log.setDevice(request.getDevice());
+    log.setScanDevice(request.getScanDevice());
+    log.setProcess(request.getProcess());
+    log.setMessage(request.getMessage());
+
+    // Solo asociar persona si el ID es válido
+    if (request.getPersonId() != null && request.getPersonId() != -1) {
         Person person = personRepository.findById(request.getPersonId())
             .orElseThrow(() -> new RuntimeException("Persona no encontrada"));
-
-        LocalDateTime scanDateTime;
-        try {
-            scanDateTime = LocalDateTime.parse(request.getScanDate(), formatter);
-        } catch (DateTimeParseException e) {
-            throw new RuntimeException("Formato inválido de scanDate. Usa: yyyy-MM-dd HH:mm:ss");
-        }
-
-        ScanLog log = new ScanLog();
-        log.setDate(scanDateTime);
-        log.setType(request.getType());
         log.setPerson(person);
-        log.setDevice(request.getDevice());
-        log.setScanDevice(request.getScanDevice());
-        log.setProcess(request.getProcess());
-        log.setMessage(request.getMessage());
-
-        scanLogRepository.save(log);
+    } else {
+        log.setPerson(null); // o simplemente no setear
     }
+
+    scanLogRepository.save(log);
+}
+
 
     public List<ScanLog> getLogsBetweenDates(LocalDateTime from, LocalDateTime to) {
         return scanLogRepository.findAllByDateBetween(from, to);
     }
 
-    public List<ScanLog> searchLogs(ScanLogFilterDTO filter) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<ScanLog> query = cb.createQuery(ScanLog.class);
-        Root<ScanLog> root = query.from(ScanLog.class);
+   public List<ScanLog> searchLogs(ScanLogFilterDTO filter) {
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+    CriteriaQuery<ScanLog> query = cb.createQuery(ScanLog.class);
+    Root<ScanLog> root = query.from(ScanLog.class);
 
-        List<Predicate> predicates = new ArrayList<>();
+    List<Predicate> predicates = new ArrayList<>();
 
-        if (filter.getPersonId() != null) {
-            predicates.add(cb.equal(root.get("person").get("id"), filter.getPersonId()));
-        }
-        if (filter.getType() != null) {
-            predicates.add(cb.equal(root.get("type"), filter.getType()));
-        }
-        if (filter.getDevice() != null) {
-            predicates.add(cb.equal(root.get("device"), filter.getDevice()));
-        }
-        if (filter.getScanDevice() != null) {
-            predicates.add(cb.equal(root.get("scanDevice"), filter.getScanDevice()));
-        }
-        if (filter.getProcess() != null) {
-            predicates.add(cb.equal(root.get("process"), filter.getProcess()));
-        }
-        if (filter.getMessage() != null) {
-            predicates.add(cb.like(root.get("message"), "%" + filter.getMessage() + "%"));
-        }
-        if (filter.getFromDate() != null) {
-            try {
-                predicates.add(cb.greaterThanOrEqualTo(
-                    root.get("date"),
-                    LocalDateTime.parse(filter.getFromDate(), formatter)
-                ));
-            } catch (DateTimeParseException e) {
-                throw new RuntimeException("Formato inválido en fromDate. Usa: yyyy-MM-dd HH:mm:ss");
-            }
-        }
-        if (filter.getToDate() != null) {
-            try {
-                predicates.add(cb.lessThanOrEqualTo(
-                    root.get("date"),
-                    LocalDateTime.parse(filter.getToDate(), formatter)
-                ));
-            } catch (DateTimeParseException e) {
-                throw new RuntimeException("Formato inválido en toDate. Usa: yyyy-MM-dd HH:mm:ss");
-            }
-        }
-
-        query.where(cb.and(predicates.toArray(new Predicate[0])));
-        return entityManager.createQuery(query).getResultList();
+    if (filter.getPersonId() != null) {
+        predicates.add(cb.equal(root.get("person").get("id"), filter.getPersonId()));
     }
+    if (filter.getType() != null) {
+        predicates.add(cb.equal(root.get("type"), filter.getType()));
+    }
+    if (filter.getDevice() != null) {
+        predicates.add(cb.equal(root.get("device"), filter.getDevice()));
+    }
+    if (filter.getScanDevice() != null) {
+        predicates.add(cb.equal(root.get("scanDevice"), filter.getScanDevice()));
+    }
+    if (filter.getProcess() != null) {
+        predicates.add(cb.equal(root.get("process"), filter.getProcess()));
+    }
+    if (filter.getMessage() != null) {
+        predicates.add(cb.like(root.get("message"), "%" + filter.getMessage() + "%"));
+    }
+
+    DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    if (filter.getFromDate() != null) {
+        try {
+            LocalDate fromDate = LocalDate.parse(filter.getFromDate(), dateOnlyFormatter);
+            predicates.add(cb.greaterThanOrEqualTo(
+                root.get("date"),
+                fromDate.atStartOfDay()
+            ));
+        } catch (DateTimeParseException e) {
+            throw new RuntimeException("Formato inválido en fromDate. Usa: yyyy-MM-dd");
+        }
+    }
+
+    if (filter.getToDate() != null) {
+        try {
+            LocalDate toDate = LocalDate.parse(filter.getToDate(), dateOnlyFormatter);
+            predicates.add(cb.lessThanOrEqualTo(
+                root.get("date"),
+                toDate.atTime(23, 59, 59, 999_999_999)
+            ));
+        } catch (DateTimeParseException e) {
+            throw new RuntimeException("Formato inválido en toDate. Usa: yyyy-MM-dd");
+        }
+    }
+
+    query.where(cb.and(predicates.toArray(new Predicate[0])));
+    return entityManager.createQuery(query).getResultList();
+}
+
+public Map<String, List<Integer>> getFullCalendarGroupedByMonth() {
+    List<java.sql.Date> sqlDates = scanLogRepository.findAllLogDates();
+
+    Map<String, Set<Integer>> grouped = new HashMap<>();
+
+    for (java.sql.Date sqlDate : sqlDates) {
+        LocalDate date = sqlDate.toLocalDate();
+        String key = date.getYear() + "-" + String.format("%02d", date.getMonthValue());
+
+        grouped.computeIfAbsent(key, k -> new TreeSet<>()) // TreeSet para orden y no duplicados
+               .add(date.getDayOfMonth());
+    }
+
+    // Convertir a Map<String, List<Integer>> para el JSON
+    Map<String, List<Integer>> result = new HashMap<>();
+    for (Map.Entry<String, Set<Integer>> entry : grouped.entrySet()) {
+        result.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+    }
+
+    return result;
+}
+
+
+
 }

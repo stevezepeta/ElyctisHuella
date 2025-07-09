@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class FingerprintVerificationResponseDTO {
     private boolean match;
     private String nombreCompleto;
+    private Long id;
 }
