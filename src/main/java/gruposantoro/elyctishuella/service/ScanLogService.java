@@ -67,11 +67,7 @@ public class ScanLogService {
 }
 
 
-    public List<ScanLog> getLogsBetweenDates(LocalDateTime from, LocalDateTime to) {
-        return scanLogRepository.findAllByDateBetween(from, to);
-    }
-
-   public List<ScanLog> searchLogs(ScanLogFilterDTO filter) {
+  public List<ScanLog> searchLogs(ScanLogFilterDTO filter) {
     CriteriaBuilder cb = entityManager.getCriteriaBuilder();
     CriteriaQuery<ScanLog> query = cb.createQuery(ScanLog.class);
     Root<ScanLog> root = query.from(ScanLog.class);
@@ -102,10 +98,22 @@ public class ScanLogService {
     if (filter.getFromDate() != null) {
         try {
             LocalDate fromDate = LocalDate.parse(filter.getFromDate(), dateOnlyFormatter);
-            predicates.add(cb.greaterThanOrEqualTo(
-                root.get("date"),
-                fromDate.atStartOfDay()
-            ));
+
+            if (filter.getToDate() == null) {
+                // Solo fromDate: rango exacto del día
+                predicates.add(cb.between(
+                    root.get("date"),
+                    fromDate.atStartOfDay(),
+                    fromDate.atTime(23, 59, 59, 999_999_999)
+                ));
+            } else {
+                // FromDate + ToDate: aplicar después el toDate
+                predicates.add(cb.greaterThanOrEqualTo(
+                    root.get("date"),
+                    fromDate.atStartOfDay()
+                ));
+            }
+
         } catch (DateTimeParseException e) {
             throw new RuntimeException("Formato inválido en fromDate. Usa: yyyy-MM-dd");
         }
@@ -126,6 +134,7 @@ public class ScanLogService {
     query.where(cb.and(predicates.toArray(new Predicate[0])));
     return entityManager.createQuery(query).getResultList();
 }
+
 
 public Map<String, List<Integer>> getFullCalendarGroupedByMonth() {
     List<java.sql.Date> sqlDates = scanLogRepository.findAllLogDates();
