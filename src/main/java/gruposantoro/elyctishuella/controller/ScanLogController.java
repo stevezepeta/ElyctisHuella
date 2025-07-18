@@ -59,6 +59,14 @@ public ResponseEntity<?> getFullLogCalendar() {
     return ResponseEntity.ok(calendar);
 }
 
+@GetMapping("/summary")
+public ResponseEntity<?> getProcessSummary(
+    @RequestParam(required = false) String fromDate,
+    @RequestParam(required = false) String toDate
+) {
+    Map<String, Object> result = scanLogService.getProcessSummary(fromDate, toDate);
+    return ResponseEntity.ok(result);
+}
 
 
 }

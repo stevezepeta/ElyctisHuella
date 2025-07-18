@@ -1,13 +1,17 @@
 package gruposantoro.elyctishuella.service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -157,7 +161,98 @@ public Map<String, List<Integer>> getFullCalendarGroupedByMonth() {
 
     return result;
 }
+public Map<String, Object> getProcessSummary(String fromDate, String toDate) {
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    LocalDateTime from = null;
+    LocalDateTime to = null;
 
+    try {
+        if (fromDate != null && toDate == null) {
+            LocalDate date = LocalDate.parse(fromDate, formatter);
+            from = date.atStartOfDay();
+            to = date.atTime(23, 59, 59, 999_999_999);
+        } else if (fromDate != null && toDate != null) {
+            from = LocalDate.parse(fromDate, formatter).atStartOfDay();
+            to = LocalDate.parse(toDate, formatter).atTime(23, 59, 59, 999_999_999);
+        }
+    } catch (DateTimeParseException e) {
+        throw new RuntimeException("Formato de fecha inválido. Usa yyyy-MM-dd");
+    }
+
+    final LocalDateTime fromFinal = from;
+    final LocalDateTime toFinal = to;
+
+    List<ScanLog> allLogs = scanLogRepository.findAll().stream()
+        .filter(log -> {
+            if (fromFinal != null && toFinal != null) {
+                return !log.getDate().isBefore(fromFinal) && !log.getDate().isAfter(toFinal);
+            } else if (fromFinal != null) {
+                return !log.getDate().isBefore(fromFinal);
+            }
+            return true;
+        })
+        .sorted(Comparator.comparing(ScanLog::getDate)) // Muy importante para orden cronológico
+        .toList();
+
+    List<ScanLog> startLogs = allLogs.stream()
+        .filter(log -> "START".equalsIgnoreCase(log.getType()))
+        .toList();
+
+    List<ScanLog> endLogs = allLogs.stream()
+        .filter(log -> "END".equalsIgnoreCase(log.getType()))
+        .toList();
+
+    List<Map<String, Object>> matchedLogs = new ArrayList<>();
+    Map<String, Integer> countByProcess = new HashMap<>();
+    Map<String, List<Long>> durationsByProcess = new HashMap<>();
+
+    // Se usarán logs de START disponibles
+    List<ScanLog> remainingStarts = new ArrayList<>(startLogs);
+
+    for (ScanLog end : endLogs) {
+        Optional<ScanLog> matchingStart = remainingStarts.stream()
+            .filter(start ->
+                start.getPerson() != null &&
+                end.getPerson() != null &&
+                start.getPerson().getId().equals(end.getPerson().getId()) &&
+                Objects.equals(start.getDevice(), end.getDevice()) &&
+                Objects.equals(start.getProcess(), end.getProcess()) &&
+                start.getDate().isBefore(end.getDate())
+            )
+            .max(Comparator.comparing(ScanLog::getDate)); // Elegir el último START antes del END
+
+        if (matchingStart.isPresent()) {
+            ScanLog start = matchingStart.get();
+
+            long seconds = Duration.between(start.getDate(), end.getDate()).getSeconds();
+            durationsByProcess.computeIfAbsent(start.getProcess(), k -> new ArrayList<>()).add(seconds);
+            countByProcess.merge(start.getProcess(), 1, Integer::sum);
+
+            Map<String, Object> match = new HashMap<>();
+           match.put("person", start.getPerson()); // 👈 objeto completo
+            match.put("device", start.getDevice());
+            match.put("process", start.getProcess());
+            match.put("startDate", start.getDate());
+            match.put("endDate", end.getDate());
+            match.put("durationSeconds", seconds);
+            matchedLogs.add(match);
+
+            remainingStarts.remove(start); // Evitar reuso de mismo START
+        }
+    }
+
+    Map<String, Double> averageDurations = new HashMap<>();
+    durationsByProcess.forEach((proc, list) -> {
+        double avg = list.stream().mapToLong(Long::longValue).average().orElse(0);
+        averageDurations.put(proc, avg);
+    });
+
+    Map<String, Object> result = new HashMap<>();
+    result.put("completedCount", countByProcess);
+    result.put("averageDurationSeconds", averageDurations);
+    result.put("matchedLogs", matchedLogs);
+    return result;
+}
 
 
 }
