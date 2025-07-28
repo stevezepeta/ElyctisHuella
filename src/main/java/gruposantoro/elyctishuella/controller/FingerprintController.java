@@ -135,7 +135,8 @@ public class FingerprintController {
             response.setMatch(true);
             response.setNombreCompleto(nombreCompleto);
             response.setId(person.getId());
-
+response.setOficinaId(                          // ← AÑADE ESTA LÍNEA
+        person.getOficina() != null ? person.getOficina().getId() : null);
             return ResponseEntity.ok(response);
 
         } catch (Exception ex) {

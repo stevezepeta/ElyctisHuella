@@ -11,4 +11,5 @@ public class FingerprintVerificationResponseDTO {
     private boolean match;
     private String nombreCompleto;
     private Long id;
+    private Long oficinaId;
 }

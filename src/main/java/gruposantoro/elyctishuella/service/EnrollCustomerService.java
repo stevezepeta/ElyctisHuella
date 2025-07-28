@@ -11,10 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import gruposantoro.elyctishuella.model.FingerPrint;
+import gruposantoro.elyctishuella.model.Oficina;
 import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.model.dto.EnrollPersonDTO;
 import gruposantoro.elyctishuella.model.dto.huellas.EnrollBiometricDataDTO;
 import gruposantoro.elyctishuella.repository.FingerPrintRepository;
+import gruposantoro.elyctishuella.repository.OficinaRepository;
 import gruposantoro.elyctishuella.repository.PersonRepository;
 import gruposantoro.elyctishuella.rulesException.EnrollException;
 import gruposantoro.elyctishuella.rulesException.ModelNotFoundException;
@@ -29,25 +31,40 @@ public class EnrollCustomerService {
     private final PersonRepository personRepository;
     private final FingerPrintRepository fingerPrintRepository;
     private final ImageService imageService;
+    private final OficinaRepository  oficinaRepository;   // ← nuevo
 
     // === ALTA BIOGRÁFICA ===
    @Transactional
-public Person enrollBiographic(EnrollPersonDTO enrollPersonDTO) {
+public Person enrollBiographic(EnrollPersonDTO dto) {
+
+    /* 1️⃣  Oficina **opcional** */
+    Oficina oficina = null;
+    if (dto.getOficinaId() != null) {
+        oficina = oficinaRepository.findById(dto.getOficinaId())
+                                   .orElse(null);   // ← si no existe, continúa con null
+    }
+
+    /* 2️⃣  Construir persona */
     Person person = new Person();
-    person.setCurp(enrollPersonDTO.getCurp()); // <--- AGREGA ESTA LÍNEA
-    person.setNombres(enrollPersonDTO.getNombres());
-    person.setPrimerApellido(enrollPersonDTO.getPrimerApellido());
-    person.setSegundoApellido(enrollPersonDTO.getSegundoApellido());
-    person.setSexo(enrollPersonDTO.getSexo());
-    person.setNacionalidad(enrollPersonDTO.getNacionalidad());
-    person.setFechaNacimiento(enrollPersonDTO.getFechaNacimiento());
-    person.setDireccion(enrollPersonDTO.getDireccion());
+    person.setCurp(dto.getCurp());
+    person.setNombres(dto.getNombres());
+    person.setPrimerApellido(dto.getPrimerApellido());
+    person.setSegundoApellido(dto.getSegundoApellido());
+    person.setSexo(dto.getSexo());
+    person.setNacionalidad(dto.getNacionalidad());
+    person.setFechaNacimiento(dto.getFechaNacimiento());
+    person.setDireccion(dto.getDireccion());
+    person.setOficina(oficina);        // puede ser null
 
     Person saved = personRepository.save(person);
-    log.info("Persona enrolada exitosamente: {} {} CURP: {}", saved.getNombres(), saved.getPrimerApellido(), saved.getCurp());
+
+    log.info("Persona enrolada: {} {} (oficina {})",
+             saved.getNombres(),
+             saved.getPrimerApellido(),
+             oficina != null ? oficina.getId() : "sin asignar");
+
     return saved;
 }
-
 
     // === ENROLAMIENTO BIOMÉTRICO con DTO ===
     @Transactional

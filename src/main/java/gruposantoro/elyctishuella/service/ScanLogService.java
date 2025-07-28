@@ -8,19 +8,21 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import gruposantoro.elyctishuella.model.Oficina;
 import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.model.ScanLog;
 import gruposantoro.elyctishuella.model.dto.ScanLogFilterDTO;
 import gruposantoro.elyctishuella.model.dto.ScanLogRequestDTO;
+import gruposantoro.elyctishuella.repository.OficinaRepository;
 import gruposantoro.elyctishuella.repository.PersonRepository;
 import gruposantoro.elyctishuella.repository.ScanLogRepository;
 import jakarta.persistence.EntityManager;
@@ -29,230 +31,212 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Servicio central para creación y consulta de ScanLog.
+ */
 @Service
 @RequiredArgsConstructor
 public class ScanLogService {
-    private final ScanLogRepository scanLogRepository;
-    private final PersonRepository personRepository;
 
+    /* ──────────────── Repositorios ─────────────── */
+    private final ScanLogRepository scanLogRepository;
+    private final PersonRepository  personRepository;
+    private final OficinaRepository oficinaRepository;
+
+    /* ──────────────── JPA Criteria ─────────────── */
     @PersistenceContext
     private EntityManager entityManager;
 
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    /* ──────────────── Formatos de fecha ─────────── */
+    private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_ONLY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
- public void saveLog(ScanLogRequestDTO request) {
-    LocalDateTime scanDateTime;
-    try {
-        scanDateTime = LocalDateTime.parse(request.getScanDate(), formatter);
-    } catch (DateTimeParseException e) {
-        throw new RuntimeException("Formato inválido de scanDate. Usa: yyyy-MM-dd HH:mm:ss");
+    /* ════════════════════════ CREATE ════════════════════════ */
+
+    /** Persiste un log y devuelve el ID generado. */
+   @Transactional
+public Long saveLog(ScanLogRequestDTO req) {
+
+    /* 1️⃣  Fecha/hora del evento */
+    LocalDateTime scanDate = parseDateTime(req.getScanDate());
+
+    /* 2️⃣  Oficina  (–1 ⇒ “sin oficina”) */
+    Oficina oficina = null;
+    if (req.getOficinaId() == null) {
+        throw new RuntimeException("oficinaId es obligatorio (use –1 si no aplica)");
     }
+    if (req.getOficinaId() > 0) {                       // sólo valida si es > 0
+        oficina = oficinaRepository.findById(req.getOficinaId())
+                .orElseThrow(() ->
+                        new RuntimeException("Oficina con id %d no existe"
+                                             .formatted(req.getOficinaId())));
+    }
+    // cuando es –1, oficina queda null
 
+    /* 3️⃣  Construcción del ScanLog */
     ScanLog log = new ScanLog();
-    log.setDate(scanDateTime);
-    log.setType(request.getType());
-    log.setDevice(request.getDevice());
-    log.setScanDevice(request.getScanDevice());
-    log.setProcess(request.getProcess());
-    log.setMessage(request.getMessage());
+    log.setDate(scanDate);
+    log.setType(req.getType());
+    log.setDevice(req.getDevice());
+    log.setScanDevice(req.getScanDevice());
+    log.setProcess(req.getProcess());
+    log.setMessage(req.getMessage());
 
-    // Solo asociar persona si el ID es válido
-    if (request.getPersonId() != null && request.getPersonId() != -1) {
-        Person person = personRepository.findById(request.getPersonId())
-            .orElseThrow(() -> new RuntimeException("Persona no encontrada"));
-        log.setPerson(person);
-    } else {
-        log.setPerson(null); // o simplemente no setear
+    // ---- Oficina y campos territoriales solo si existe ----
+    if (oficina != null) {
+        log.setOficina(oficina);
+        log.setPaisId(oficina.getPaisId());
+        log.setEstadoId(oficina.getEstadoId());
+        log.setMunicipioId(oficina.getMunicipioId());
     }
 
-    scanLogRepository.save(log);
+    /* 4️⃣  Persona (opcional) */
+    if (req.getPersonId() != null && req.getPersonId() > 0) {
+        Person p = personRepository.findById(req.getPersonId())
+                                   .orElseThrow(() ->
+                                           new RuntimeException("Persona con id %d no existe"
+                                                                .formatted(req.getPersonId())));
+        log.setPerson(p);
+    }
+
+    /* 5️⃣  Persistir y devolver id */
+    return scanLogRepository.save(log).getId();
 }
 
+    /* ════════════════════════ FILTER ════════════════════════ */
 
-  public List<ScanLog> searchLogs(ScanLogFilterDTO filter) {
-    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-    CriteriaQuery<ScanLog> query = cb.createQuery(ScanLog.class);
-    Root<ScanLog> root = query.from(ScanLog.class);
+    public List<ScanLog> searchLogs(ScanLogFilterDTO f) {
 
-    List<Predicate> predicates = new ArrayList<>();
+        CriteriaBuilder cb  = entityManager.getCriteriaBuilder();
+        CriteriaQuery<ScanLog> cq = cb.createQuery(ScanLog.class);
+        Root<ScanLog> root = cq.from(ScanLog.class);
 
-    if (filter.getPersonId() != null) {
-        predicates.add(cb.equal(root.get("person").get("id"), filter.getPersonId()));
+        List<Predicate> predicates = new ArrayList<>();
+
+        // Filtros básicos
+        if (f.getPersonId()   != null) predicates.add(cb.equal(root.get("person").get("id"), f.getPersonId()));
+        if (f.getType()       != null) predicates.add(cb.equal(root.get("type"),       f.getType()));
+        if (f.getDevice()     != null) predicates.add(cb.equal(root.get("device"),     f.getDevice()));
+        if (f.getScanDevice() != null) predicates.add(cb.equal(root.get("scanDevice"), f.getScanDevice()));
+        if (f.getProcess()    != null) predicates.add(cb.equal(root.get("process"),    f.getProcess()));
+        if (f.getMessage()    != null) predicates.add(cb.like(root.get("message"), "%" + f.getMessage() + "%"));
+
+        // Territoriales
+        if (f.getPaisId()      != null) predicates.add(cb.equal(root.get("paisId"),      f.getPaisId()));
+        if (f.getEstadoId()    != null) predicates.add(cb.equal(root.get("estadoId"),    f.getEstadoId()));
+        if (f.getMunicipioId() != null) predicates.add(cb.equal(root.get("municipioId"), f.getMunicipioId()));
+        if (f.getOficinaId()   != null) predicates.add(cb.equal(root.get("oficina").get("id"), f.getOficinaId()));
+
+        // Rango de fechas (inclusivo)
+        if (f.getFromDate() != null) {
+            LocalDate d = parseDateOnly(f.getFromDate());
+            predicates.add(cb.greaterThanOrEqualTo(root.get("date"), d.atStartOfDay()));
+        }
+        if (f.getToDate() != null) {
+            LocalDate d = parseDateOnly(f.getToDate());
+            predicates.add(cb.lessThanOrEqualTo(root.get("date"), d.atTime(23, 59, 59, 999_999_999)));
+        }
+
+        cq.where(predicates.toArray(Predicate[]::new));
+        return entityManager.createQuery(cq).getResultList();
     }
-    if (filter.getType() != null) {
-        predicates.add(cb.equal(root.get("type"), filter.getType()));
-    }
-    if (filter.getDevice() != null) {
-        predicates.add(cb.equal(root.get("device"), filter.getDevice()));
-    }
-    if (filter.getScanDevice() != null) {
-        predicates.add(cb.equal(root.get("scanDevice"), filter.getScanDevice()));
-    }
-    if (filter.getProcess() != null) {
-        predicates.add(cb.equal(root.get("process"), filter.getProcess()));
-    }
-    if (filter.getMessage() != null) {
-        predicates.add(cb.like(root.get("message"), "%" + filter.getMessage() + "%"));
+
+    /* ═══════════════════════ CALENDARIO ═══════════════════════ */
+
+    public Map<String,List<Integer>> getFullCalendarGroupedByMonth() {
+
+        List<java.sql.Date> raw = scanLogRepository.findAllLogDates();
+
+        return raw.stream()
+                  .map(java.sql.Date::toLocalDate)
+                  .collect(Collectors.groupingBy(
+                          d -> d.getYear() + "-" + String.format("%02d", d.getMonthValue()),
+                          LinkedHashMap::new,
+                          Collectors.mapping(LocalDate::getDayOfMonth,
+                                             Collectors.collectingAndThen(Collectors.toCollection(TreeSet::new),
+                                                                          ArrayList::new))));
     }
 
-    DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    /* ═══════════════════════ SUMMARY ═══════════════════════ */
 
-    if (filter.getFromDate() != null) {
-        try {
-            LocalDate fromDate = LocalDate.parse(filter.getFromDate(), dateOnlyFormatter);
+    public Map<String,Object> getProcessSummary(String fromDate, String toDate) {
 
-            if (filter.getToDate() == null) {
-                // Solo fromDate: rango exacto del día
-                predicates.add(cb.between(
-                    root.get("date"),
-                    fromDate.atStartOfDay(),
-                    fromDate.atTime(23, 59, 59, 999_999_999)
-                ));
-            } else {
-                // FromDate + ToDate: aplicar después el toDate
-                predicates.add(cb.greaterThanOrEqualTo(
-                    root.get("date"),
-                    fromDate.atStartOfDay()
-                ));
-            }
+        LocalDateTime from = (fromDate != null) ? parseDateOnly(fromDate).atStartOfDay() : null;
+        LocalDateTime to   = (toDate   != null) ? parseDateOnly(toDate).atTime(23, 59, 59, 999_999_999) : null;
 
-        } catch (DateTimeParseException e) {
-            throw new RuntimeException("Formato inválido en fromDate. Usa: yyyy-MM-dd");
+        List<ScanLog> all = scanLogRepository.findAll().stream()
+                .filter(l -> inRange(l.getDate(), from, to))
+                .sorted(Comparator.comparing(ScanLog::getDate))
+                .toList();
+
+        List<ScanLog> starts = all.stream().filter(l -> "START".equalsIgnoreCase(l.getType())).toList();
+        List<ScanLog> ends   = all.stream().filter(l -> "END".equalsIgnoreCase(l.getType())).toList();
+
+        Map<String,Integer> completed = new HashMap<>();
+        Map<String,List<Long>> durs   = new HashMap<>();
+        List<Map<String,Object>> pairs = new ArrayList<>();
+        List<ScanLog> open = new ArrayList<>(starts);
+
+        for (ScanLog end : ends) {
+            open.stream()
+                .filter(st -> samePair(st, end) && st.getDate().isBefore(end.getDate()))
+                .max(Comparator.comparing(ScanLog::getDate))
+                .ifPresent(st -> {
+                    long secs = Duration.between(st.getDate(), end.getDate()).getSeconds();
+                    durs.computeIfAbsent(st.getProcess(), k -> new ArrayList<>()).add(secs);
+                    completed.merge(st.getProcess(), 1, Integer::sum);
+
+                    Map<String,Object> m = new LinkedHashMap<>();
+                    m.put("person",          st.getPerson());
+                    m.put("device",          st.getDevice());
+                    m.put("process",         st.getProcess());
+                    m.put("startDate",       st.getDate());
+                    m.put("endDate",         end.getDate());
+                    m.put("durationSeconds", secs);
+                    pairs.add(m);
+
+                    open.remove(st);
+                });
+        }
+
+        Map<String,Double> avg = new HashMap<>();
+        durs.forEach((k,v) -> avg.put(k, v.stream().mapToLong(Long::longValue).average().orElse(0)));
+
+        return Map.of(
+                "completedCount",         completed,
+                "averageDurationSeconds", avg,
+                "matchedLogs",            pairs
+        );
+    }
+
+    /* ═══════════════════════ HELPERS ═══════════════════════ */
+
+    private LocalDateTime parseDateTime(String s) {
+        try { return LocalDateTime.parse(s, DATE_TIME_FMT); }
+        catch (DateTimeParseException ex) {
+            throw new RuntimeException("scanDate inválido. Usa yyyy-MM-dd HH:mm:ss");
         }
     }
 
-    if (filter.getToDate() != null) {
-        try {
-            LocalDate toDate = LocalDate.parse(filter.getToDate(), dateOnlyFormatter);
-            predicates.add(cb.lessThanOrEqualTo(
-                root.get("date"),
-                toDate.atTime(23, 59, 59, 999_999_999)
-            ));
-        } catch (DateTimeParseException e) {
-            throw new RuntimeException("Formato inválido en toDate. Usa: yyyy-MM-dd");
+    private LocalDate parseDateOnly(String s) {
+        try { return LocalDate.parse(s, DATE_ONLY_FMT); }
+        catch (DateTimeParseException ex) {
+            throw new RuntimeException("Fecha inválida. Usa yyyy-MM-dd");
         }
     }
 
-    query.where(cb.and(predicates.toArray(new Predicate[0])));
-    return entityManager.createQuery(query).getResultList();
-}
-
-
-public Map<String, List<Integer>> getFullCalendarGroupedByMonth() {
-    List<java.sql.Date> sqlDates = scanLogRepository.findAllLogDates();
-
-    Map<String, Set<Integer>> grouped = new HashMap<>();
-
-    for (java.sql.Date sqlDate : sqlDates) {
-        LocalDate date = sqlDate.toLocalDate();
-        String key = date.getYear() + "-" + String.format("%02d", date.getMonthValue());
-
-        grouped.computeIfAbsent(key, k -> new TreeSet<>()) // TreeSet para orden y no duplicados
-               .add(date.getDayOfMonth());
+    private boolean inRange(LocalDateTime d, LocalDateTime from, LocalDateTime to) {
+        return (from == null || !d.isBefore(from)) &&
+               (to   == null || !d.isAfter(to));
     }
 
-    // Convertir a Map<String, List<Integer>> para el JSON
-    Map<String, List<Integer>> result = new HashMap<>();
-    for (Map.Entry<String, Set<Integer>> entry : grouped.entrySet()) {
-        result.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+    /** Misma persona + dispositivo + proceso → pareja START/END. */
+    private boolean samePair(ScanLog a, ScanLog b) {
+        return Objects.equals(a.getPerson(),  b.getPerson()) &&
+               Objects.equals(a.getDevice(),  b.getDevice()) &&
+               Objects.equals(a.getProcess(), b.getProcess());
     }
-
-    return result;
-}
-public Map<String, Object> getProcessSummary(String fromDate, String toDate) {
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    LocalDateTime from = null;
-    LocalDateTime to = null;
-
-    try {
-        if (fromDate != null && toDate == null) {
-            LocalDate date = LocalDate.parse(fromDate, formatter);
-            from = date.atStartOfDay();
-            to = date.atTime(23, 59, 59, 999_999_999);
-        } else if (fromDate != null && toDate != null) {
-            from = LocalDate.parse(fromDate, formatter).atStartOfDay();
-            to = LocalDate.parse(toDate, formatter).atTime(23, 59, 59, 999_999_999);
-        }
-    } catch (DateTimeParseException e) {
-        throw new RuntimeException("Formato de fecha inválido. Usa yyyy-MM-dd");
-    }
-
-    final LocalDateTime fromFinal = from;
-    final LocalDateTime toFinal = to;
-
-    List<ScanLog> allLogs = scanLogRepository.findAll().stream()
-        .filter(log -> {
-            if (fromFinal != null && toFinal != null) {
-                return !log.getDate().isBefore(fromFinal) && !log.getDate().isAfter(toFinal);
-            } else if (fromFinal != null) {
-                return !log.getDate().isBefore(fromFinal);
-            }
-            return true;
-        })
-        .sorted(Comparator.comparing(ScanLog::getDate)) // Muy importante para orden cronológico
-        .toList();
-
-    List<ScanLog> startLogs = allLogs.stream()
-        .filter(log -> "START".equalsIgnoreCase(log.getType()))
-        .toList();
-
-    List<ScanLog> endLogs = allLogs.stream()
-        .filter(log -> "END".equalsIgnoreCase(log.getType()))
-        .toList();
-
-    List<Map<String, Object>> matchedLogs = new ArrayList<>();
-    Map<String, Integer> countByProcess = new HashMap<>();
-    Map<String, List<Long>> durationsByProcess = new HashMap<>();
-
-    // Se usarán logs de START disponibles
-    List<ScanLog> remainingStarts = new ArrayList<>(startLogs);
-
-    for (ScanLog end : endLogs) {
-        Optional<ScanLog> matchingStart = remainingStarts.stream()
-            .filter(start ->
-                start.getPerson() != null &&
-                end.getPerson() != null &&
-                start.getPerson().getId().equals(end.getPerson().getId()) &&
-                Objects.equals(start.getDevice(), end.getDevice()) &&
-                Objects.equals(start.getProcess(), end.getProcess()) &&
-                start.getDate().isBefore(end.getDate())
-            )
-            .max(Comparator.comparing(ScanLog::getDate)); // Elegir el último START antes del END
-
-        if (matchingStart.isPresent()) {
-            ScanLog start = matchingStart.get();
-
-            long seconds = Duration.between(start.getDate(), end.getDate()).getSeconds();
-            durationsByProcess.computeIfAbsent(start.getProcess(), k -> new ArrayList<>()).add(seconds);
-            countByProcess.merge(start.getProcess(), 1, Integer::sum);
-
-            Map<String, Object> match = new HashMap<>();
-           match.put("person", start.getPerson()); // 👈 objeto completo
-            match.put("device", start.getDevice());
-            match.put("process", start.getProcess());
-            match.put("startDate", start.getDate());
-            match.put("endDate", end.getDate());
-            match.put("durationSeconds", seconds);
-            matchedLogs.add(match);
-
-            remainingStarts.remove(start); // Evitar reuso de mismo START
-        }
-    }
-
-    Map<String, Double> averageDurations = new HashMap<>();
-    durationsByProcess.forEach((proc, list) -> {
-        double avg = list.stream().mapToLong(Long::longValue).average().orElse(0);
-        averageDurations.put(proc, avg);
-    });
-
-    Map<String, Object> result = new HashMap<>();
-    result.put("completedCount", countByProcess);
-    result.put("averageDurationSeconds", averageDurations);
-    result.put("matchedLogs", matchedLogs);
-    return result;
-}
-
-
 }

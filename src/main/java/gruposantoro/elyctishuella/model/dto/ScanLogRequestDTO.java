@@ -4,11 +4,14 @@ import lombok.Data;
 
 @Data
 public class ScanLogRequestDTO {
-    private Long personId;
+
+    private String scanDate;        // "yyyy-MM-dd HH:mm:ss"
     private String type;
     private String device;
     private String scanDevice;
     private String process;
     private String message;
-    private String scanDate; 
+
+    private Long personId;          // opcional
+    private Long oficinaId;         // ✔️ Único ID de ubicación
 }

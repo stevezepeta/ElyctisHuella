@@ -31,11 +31,12 @@ public class CatalogController {
     }
 
     // Obtener ciudades por país y estado (solo id y name)
- @GetMapping("/municipios/{pais}/{estado}")
-public List<SimpleDTO> getMunicipios(@PathVariable String pais, @PathVariable String estado) {
-    return catalogService.getCitiesByState(pais, estado).stream()
-        .map(city -> new SimpleDTO(city.getId(), city.getName()))
-        .toList();
+@GetMapping("/municipios/{pais}/{estado}")
+public List<SimpleDTO> getMunicipios(@PathVariable String pais,
+                                     @PathVariable String estado) {
+    // ya es List<SimpleDTO>
+    return catalogService.getCitiesByState(pais, estado);
 }
+
 
 }

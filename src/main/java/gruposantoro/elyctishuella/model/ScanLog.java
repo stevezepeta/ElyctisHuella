@@ -2,8 +2,11 @@ package gruposantoro.elyctishuella.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,29 +24,46 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ScanLog {
 
+    /* ─────────── Clave primaria ─────────── */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "scan_date")
-    private LocalDateTime date;
+    /* ─────────── Datos del evento ────────── */
+    @Column(name = "scan_date", nullable = false)
+    private LocalDateTime date;                    // fecha-hora exacta
 
-    @Column(name = "scan_type")
-    private String type;
+    @Column(name = "scan_type", length = 50)
+    private String type;                           // START, END, MRZ…
 
-    @ManyToOne
-    @JoinColumn(name = "person_id", referencedColumnName = "id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "person_id")                // FK opcional
     private Person person;
 
-    @Column(name = "device")
-    private String device;
+    private String device;                         // ej. “iPhone 13”
 
     @Column(name = "scan_device")
-    private String scanDevice;
+    private String scanDevice;                     // ej. “Zebra S500”
 
     @Column(name = "process_type")
-    private String process; // INE, Passport, etc.
+    private String process;                        // PASSPORT, INE…
 
-    @Column(name = "message", columnDefinition = "TEXT")
-    private String message;
+    @Column(columnDefinition = "TEXT")
+    private String message;                        // descripción / error
+
+    /* ─────── Relación con Oficina ─────── */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "oficina_id")               // FK real (nullable)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Oficina oficina;
+
+    /* ────── Campos denormalizados (opcional) ────── */
+    @Column(name = "pais_id")
+    private Long paisId;
+
+    @Column(name = "estado_id")
+    private Long estadoId;
+
+    @Column(name = "municipio_id")
+    private Long municipioId;
 }

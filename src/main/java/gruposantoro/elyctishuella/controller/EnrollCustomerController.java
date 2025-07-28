@@ -2,6 +2,9 @@ package gruposantoro.elyctishuella.controller;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +26,6 @@ import gruposantoro.elyctishuella.rulesException.ModelNotFoundException;
 import gruposantoro.elyctishuella.service.EnrollCustomerService;
 import gruposantoro.elyctishuella.service.FingerprintService;
 import gruposantoro.elyctishuella.util.Message;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -37,28 +39,39 @@ public class EnrollCustomerController {
     private final EnrollCustomerService enrollCustomerService;
  private final FingerprintService fingerprintService;
     private final PersonRepository personRepository;
-    @PostMapping("/enroll/biographic")
-    public ResponseEntity<Message> enrollBiographic(@RequestBody @Valid EnrollPersonDTO enrollPersonDTO) {
-        Person personSaved = enrollCustomerService.enrollBiographic(enrollPersonDTO);
+  @PostMapping("/enroll/biographic")
+public ResponseEntity<Message> enrollBiographic(@RequestBody EnrollPersonDTO dto) {
 
-        // ¡Ojo! Si tienes separados "primerApellido" y "segundoApellido", concaténalos:
-        String nombreCompleto = personSaved.getNombres();
-        if (personSaved.getPrimerApellido() != null) {
-            nombreCompleto += " " + personSaved.getPrimerApellido();
-        }
-        if (personSaved.getSegundoApellido() != null) {
-            nombreCompleto += " " + personSaved.getSegundoApellido();
-        }
+    /* ①  Persistir datos biográficos (ya no lanza EnrollException) */
+    Person personSaved = enrollCustomerService.enrollBiographic(dto);
 
-        PersonEnrolledDTO personEnrolled = PersonEnrolledDTO.builder()
+    /* ②  Nombre completo */
+    String nombreCompleto = Stream.of(
+            personSaved.getNombres(),
+            personSaved.getPrimerApellido(),
+            personSaved.getSegundoApellido())
+        .filter(Objects::nonNull)
+        .collect(Collectors.joining(" "));
+
+    /* ③  Payload de respuesta */
+    PersonEnrolledDTO payload = PersonEnrolledDTO.builder()
             .idPerson(personSaved.getId())
-            .nombreCompleto(nombreCompleto.trim())
+            .nombreCompleto(nombreCompleto)
+            .oficinaId(
+                personSaved.getOficina() != null
+                    ? personSaved.getOficina().getId()
+                    : null
+            )
             .build();
 
-        return ResponseEntity.ok(
-            new Message(true, "Datos biográficos enrolados correctamente", personEnrolled)
-        );
-    }
+    /* ④  OK */
+    return ResponseEntity.ok(
+            new Message(true,
+                        "Datos biográficos enrolados correctamente",
+                        payload));
+}
+
+
 
    @PostMapping("/enroll/fingerprint")
     public ResponseEntity<Message> enrollBiometric(
