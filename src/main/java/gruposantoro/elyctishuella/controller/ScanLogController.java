@@ -91,11 +91,13 @@ public ResponseEntity<List<ScanLog>> filterLogs(
 
     /* ───────────────────────  RESUMEN  ─────────────────────── */
 
-    @GetMapping("/summary")
-    public ResponseEntity<Map<String, Object>> getProcessSummary(
-            @RequestParam(required = false) String fromDate,
-            @RequestParam(required = false) String toDate) {
+   @GetMapping("/summary")
+public ResponseEntity<Map<String, Object>> getProcessSummary(
+        @RequestParam(required = false) String fromDate,
+        @RequestParam(required = false) String toDate,
+        @RequestParam(required = false) Long oficinaId) {
 
-        return ResponseEntity.ok(scanLogService.getProcessSummary(fromDate, toDate));
-    }
+    return ResponseEntity.ok(scanLogService.getProcessSummary(fromDate, toDate, oficinaId));
+}
+
 }

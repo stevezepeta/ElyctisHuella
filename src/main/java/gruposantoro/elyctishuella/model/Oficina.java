@@ -32,13 +32,13 @@ public class Oficina {
     private String direccion;       // calle, número, etc.
 
     /* ──────── Identificadores territoriales ─── */
-    @Column(name = "pais_id",     nullable = false)
+    @Column(name = "pais_id"   )
     private Long paisId;            // FK → tabla países
 
-    @Column(name = "estado_id",   nullable = false)
+    @Column(name = "estado_id" )
     private Long estadoId;          // FK → tabla estados
 
-    @Column(name = "municipio_id", nullable = false)
+    @Column(name = "municipio_id")
     private Long municipioId;       // FK → tabla municipios
     
 }

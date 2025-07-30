@@ -2,7 +2,6 @@ package gruposantoro.elyctishuella.model.dto;
 
 import java.time.LocalDate;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
@@ -18,5 +17,4 @@ public class EnrollPersonDTO {
     private String nacionalidad;
     private String direccion;
 
-    @NotNull  private Long oficinaId;          // ← NUEVO
 }

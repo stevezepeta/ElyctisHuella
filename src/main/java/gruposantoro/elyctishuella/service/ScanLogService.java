@@ -161,56 +161,86 @@ public Long saveLog(ScanLogRequestDTO req) {
     }
 
     /* ═══════════════════════ SUMMARY ═══════════════════════ */
+    /* ═══════════════════════ SUMMARY ═══════════════════════ */
+public Map<String, Object> getProcessSummary(String fromDate, String toDate, Long oficinaId) {
+    LocalDateTime from = null;
+    LocalDateTime to = null;
 
-    public Map<String,Object> getProcessSummary(String fromDate, String toDate) {
-
-        LocalDateTime from = (fromDate != null) ? parseDateOnly(fromDate).atStartOfDay() : null;
-        LocalDateTime to   = (toDate   != null) ? parseDateOnly(toDate).atTime(23, 59, 59, 999_999_999) : null;
-
-        List<ScanLog> all = scanLogRepository.findAll().stream()
-                .filter(l -> inRange(l.getDate(), from, to))
-                .sorted(Comparator.comparing(ScanLog::getDate))
-                .toList();
-
-        List<ScanLog> starts = all.stream().filter(l -> "START".equalsIgnoreCase(l.getType())).toList();
-        List<ScanLog> ends   = all.stream().filter(l -> "END".equalsIgnoreCase(l.getType())).toList();
-
-        Map<String,Integer> completed = new HashMap<>();
-        Map<String,List<Long>> durs   = new HashMap<>();
-        List<Map<String,Object>> pairs = new ArrayList<>();
-        List<ScanLog> open = new ArrayList<>(starts);
-
-        for (ScanLog end : ends) {
-            open.stream()
-                .filter(st -> samePair(st, end) && st.getDate().isBefore(end.getDate()))
-                .max(Comparator.comparing(ScanLog::getDate))
-                .ifPresent(st -> {
-                    long secs = Duration.between(st.getDate(), end.getDate()).getSeconds();
-                    durs.computeIfAbsent(st.getProcess(), k -> new ArrayList<>()).add(secs);
-                    completed.merge(st.getProcess(), 1, Integer::sum);
-
-                    Map<String,Object> m = new LinkedHashMap<>();
-                    m.put("person",          st.getPerson());
-                    m.put("device",          st.getDevice());
-                    m.put("process",         st.getProcess());
-                    m.put("startDate",       st.getDate());
-                    m.put("endDate",         end.getDate());
-                    m.put("durationSeconds", secs);
-                    pairs.add(m);
-
-                    open.remove(st);
-                });
-        }
-
-        Map<String,Double> avg = new HashMap<>();
-        durs.forEach((k,v) -> avg.put(k, v.stream().mapToLong(Long::longValue).average().orElse(0)));
-
-        return Map.of(
-                "completedCount",         completed,
-                "averageDurationSeconds", avg,
-                "matchedLogs",            pairs
-        );
+    if (fromDate != null && (toDate == null || fromDate.equals(toDate))) {
+        // Solo un día exacto
+        LocalDate d = parseDateOnly(fromDate);
+        from = d.atStartOfDay();
+        to = d.atTime(23, 59, 59, 999_999_999);
+    } else {
+        if (fromDate != null) from = parseDateOnly(fromDate).atStartOfDay();
+        if (toDate != null)   to   = parseDateOnly(toDate).atTime(23, 59, 59, 999_999_999);
     }
+
+    // Construir consulta base con CriteriaBuilder
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+    CriteriaQuery<ScanLog> cq = cb.createQuery(ScanLog.class);
+    Root<ScanLog> root = cq.from(ScanLog.class);
+
+    List<Predicate> predicates = new ArrayList<>();
+    if (from != null)       predicates.add(cb.greaterThanOrEqualTo(root.get("date"), from));
+    if (to != null)         predicates.add(cb.lessThanOrEqualTo(root.get("date"), to));
+    if (oficinaId != null)  predicates.add(cb.equal(root.get("oficina").get("id"), oficinaId));
+
+    cq.where(predicates.toArray(Predicate[]::new));
+    cq.orderBy(cb.asc(root.get("date")));
+
+    // Ejecutar consulta
+    List<ScanLog> all = entityManager.createQuery(cq).getResultList();
+
+    // Separar logs en START y END
+    List<ScanLog> starts = all.stream()
+        .filter(l -> "START".equalsIgnoreCase(l.getType()))
+        .toList();
+    List<ScanLog> ends = all.stream()
+        .filter(l -> "END".equalsIgnoreCase(l.getType()))
+        .toList();
+
+    // Estructuras para resultado
+    Map<String, Integer> completed = new HashMap<>();
+    Map<String, List<Long>> durs = new HashMap<>();
+    List<Map<String, Object>> pairs = new ArrayList<>();
+    List<ScanLog> open = new ArrayList<>(starts);
+
+    for (ScanLog end : ends) {
+        open.stream()
+            .filter(st -> samePair(st, end) && st.getDate().isBefore(end.getDate()))
+            .max(Comparator.comparing(ScanLog::getDate))
+            .ifPresent(st -> {
+                long secs = Duration.between(st.getDate(), end.getDate()).getSeconds();
+                durs.computeIfAbsent(st.getProcess(), k -> new ArrayList<>()).add(secs);
+                completed.merge(st.getProcess(), 1, Integer::sum);
+
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("person",          st.getPerson());
+                m.put("device",          st.getDevice());
+                m.put("process",         st.getProcess());
+                m.put("startDate",       st.getDate());
+                m.put("endDate",         end.getDate());
+                m.put("durationSeconds", secs);
+                m.put("oficinaId",       st.getOficina() != null ? st.getOficina().getId() : null);
+                pairs.add(m);
+
+                open.remove(st);
+            });
+    }
+
+    Map<String, Double> avg = new HashMap<>();
+    durs.forEach((k, v) -> avg.put(k, v.stream().mapToLong(Long::longValue).average().orElse(0)));
+
+    return Map.of(
+        "completedCount",         completed,
+        "averageDurationSeconds", avg,
+        "matchedLogs",            pairs
+    );
+}
+
+
+
 
     /* ═══════════════════════ HELPERS ═══════════════════════ */
 

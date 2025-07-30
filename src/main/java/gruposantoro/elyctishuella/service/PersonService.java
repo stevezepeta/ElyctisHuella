@@ -49,7 +49,7 @@ if (dto.getOficinaId() != null) {
         person.setNacionalidad(dto.getNacionalidad());
         person.setFechaNacimiento(dto.getFechaNacimiento());
         person.setDireccion(dto.getDireccion());
-        person.setOficina(oficina);   // puede ser null
+          // puede ser null
 
         // 4️⃣ Persistir y retornar
         return personRepository.save(person);

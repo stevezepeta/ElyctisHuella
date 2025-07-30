@@ -2,7 +2,6 @@ package gruposantoro.elyctishuella.service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Service;
 import gruposantoro.elyctishuella.model.Oficina;
 import gruposantoro.elyctishuella.model.dto.OficinaDTO;
 import gruposantoro.elyctishuella.model.dto.OficinaFilterDTO;
-import gruposantoro.elyctishuella.model.dto.StateDTO;
 import gruposantoro.elyctishuella.repository.OficinaRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -27,41 +25,12 @@ public class OficinaService {
 
  /* ═════════════════════ CREAR OFICINA ═════════════════════ */
 public Oficina crear(OficinaDTO dto) {
-
-    /* 1️⃣ Validaciones mínimas */
-    if (dto.getPaisId() == null || dto.getEstadoId() == null || dto.getMunicipioId() == null) {
-        throw new RuntimeException("paisId, estadoId y municipioId son obligatorios");
-    }
-
-    /* 2️⃣ País existe */
-    boolean paisOk = catalogService.getAllCountries().stream()   // SimpleDTO (record)
-            .anyMatch(p -> Objects.equals(p.id(), dto.getPaisId()));
-    if (!paisOk) {
-        throw new RuntimeException("País no encontrado");
-    }
-
-    /* 3️⃣ Estado pertenece al país */
-    List<StateDTO> estados = catalogService.getStatesByCountryId(dto.getPaisId());
-    StateDTO estado = estados.stream()
-            .filter(e -> Objects.equals(e.getId(), dto.getEstadoId()))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("El estado no pertenece al país seleccionado"));
-
-    /* 4️⃣ Municipio pertenece al estado */
-    boolean municipioOk = estado.getCities().stream()            // List<CityDTO>
-            .anyMatch(c -> Objects.equals(c.getId(), dto.getMunicipioId()));
-    if (!municipioOk) {
-        throw new RuntimeException("El municipio no pertenece al estado seleccionado");
-    }
-
-    /* 5️⃣ Persistencia */
     Oficina oficina = new Oficina();
     oficina.setNombre(dto.getNombre());
     oficina.setDireccion(dto.getDireccion());
     oficina.setPaisId(dto.getPaisId());
     oficina.setEstadoId(dto.getEstadoId());
     oficina.setMunicipioId(dto.getMunicipioId());
-
     return oficinaRepository.save(oficina);
 }
 

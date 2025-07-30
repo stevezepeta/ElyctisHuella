@@ -39,12 +39,15 @@ public class OficinaController {
 
     /* ════════ CREAR OFICINA ════════ */
 
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
-                 produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Oficina> crearOficina(@RequestBody OficinaDTO dto) {
-        Oficina saved = oficinaService.crear(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-    }
+ @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+             produces = MediaType.APPLICATION_JSON_VALUE)
+public ResponseEntity<List<Oficina>> crearOficinas(@RequestBody List<OficinaDTO> listaDto) {
+    List<Oficina> guardadas = listaDto.stream()
+        .map(oficinaService::crear)
+        .toList();
+    return ResponseEntity.status(HttpStatus.CREATED).body(guardadas);
+}
+
 
     /* ════════ BUSCAR OFICINAS ════════ */
 

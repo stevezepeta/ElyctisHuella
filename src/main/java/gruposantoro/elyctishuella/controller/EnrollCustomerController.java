@@ -37,43 +37,37 @@ public class EnrollCustomerController {
 
     private final ObjectMapper objectMapper;
     private final EnrollCustomerService enrollCustomerService;
- private final FingerprintService fingerprintService;
+    private final FingerprintService fingerprintService;
     private final PersonRepository personRepository;
-  @PostMapping("/enroll/biographic")
-public ResponseEntity<Message> enrollBiographic(@RequestBody EnrollPersonDTO dto) {
 
-    /* ①  Persistir datos biográficos (ya no lanza EnrollException) */
-    Person personSaved = enrollCustomerService.enrollBiographic(dto);
+    @PostMapping("/enroll/biographic")
+    public ResponseEntity<Message> enrollBiographic(@RequestBody EnrollPersonDTO dto) {
 
-    /* ②  Nombre completo */
-    String nombreCompleto = Stream.of(
-            personSaved.getNombres(),
-            personSaved.getPrimerApellido(),
-            personSaved.getSegundoApellido())
-        .filter(Objects::nonNull)
-        .collect(Collectors.joining(" "));
+        // ① Persistir datos biográficos
+        Person personSaved = enrollCustomerService.enrollBiographic(dto);
 
-    /* ③  Payload de respuesta */
-    PersonEnrolledDTO payload = PersonEnrolledDTO.builder()
-            .idPerson(personSaved.getId())
-            .nombreCompleto(nombreCompleto)
-            .oficinaId(
-                personSaved.getOficina() != null
-                    ? personSaved.getOficina().getId()
-                    : null
-            )
-            .build();
+        // ② Construir nombre completo
+        String nombreCompleto = Stream.of(
+                personSaved.getNombres(),
+                personSaved.getPrimerApellido(),
+                personSaved.getSegundoApellido())
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(" "));
 
-    /* ④  OK */
-    return ResponseEntity.ok(
-            new Message(true,
-                        "Datos biográficos enrolados correctamente",
-                        payload));
-}
+        // ③ Payload de respuesta (sin oficinaId)
+        PersonEnrolledDTO payload = PersonEnrolledDTO.builder()
+                .idPerson(personSaved.getId())
+                .nombreCompleto(nombreCompleto)
+                .build();
 
+        // ④ OK
+        return ResponseEntity.ok(
+                new Message(true,
+                            "Datos biográficos enrolados correctamente",
+                            payload));
+    }
 
-
-   @PostMapping("/enroll/fingerprint")
+    @PostMapping("/enroll/fingerprint")
     public ResponseEntity<Message> enrollBiometric(
             @RequestParam Map<String, MultipartFile> filesBiometric,
             @RequestParam("info") @NotNull @NotBlank String info
@@ -87,5 +81,5 @@ public ResponseEntity<Message> enrollBiographic(@RequestBody EnrollPersonDTO dto
         return ResponseEntity.ok(
             new Message(true, "Biometric data enrolled successfully", null)
         );
-}
+    }
 }

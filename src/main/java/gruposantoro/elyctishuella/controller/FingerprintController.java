@@ -135,8 +135,8 @@ public class FingerprintController {
             response.setMatch(true);
             response.setNombreCompleto(nombreCompleto);
             response.setId(person.getId());
-response.setOficinaId(                          // ← AÑADE ESTA LÍNEA
-        person.getOficina() != null ? person.getOficina().getId() : null);
+            // 🔴 Eliminada línea: response.setOficinaId(...) ← ya no existe getOficina()
+
             return ResponseEntity.ok(response);
 
         } catch (Exception ex) {
@@ -146,18 +146,18 @@ response.setOficinaId(                          // ← AÑADE ESTA LÍNEA
     }
 
     private String getFingerprintPath(FingerPrint fingerPrint, String finger) {
-        switch (finger) {
-            case "thumbLeft": return fingerPrint.getThumbLeft();
-            case "indexLeft": return fingerPrint.getIndexLeft();
-            case "middleLeft": return fingerPrint.getMiddleLeft();
-            case "ringLeft": return fingerPrint.getRingLeft();
-            case "littleLeft": return fingerPrint.getLittleLeft();
-            case "thumbRight": return fingerPrint.getThumbRight();
-            case "indexRight": return fingerPrint.getIndexRight();
-            case "middleRight": return fingerPrint.getMiddleRight();
-            case "ringRight": return fingerPrint.getRingRight();
-            case "littleRight": return fingerPrint.getLittleRight();
-            default: return null;
-        }
+        return switch (finger) {
+            case "thumbLeft" -> fingerPrint.getThumbLeft();
+            case "indexLeft" -> fingerPrint.getIndexLeft();
+            case "middleLeft" -> fingerPrint.getMiddleLeft();
+            case "ringLeft" -> fingerPrint.getRingLeft();
+            case "littleLeft" -> fingerPrint.getLittleLeft();
+            case "thumbRight" -> fingerPrint.getThumbRight();
+            case "indexRight" -> fingerPrint.getIndexRight();
+            case "middleRight" -> fingerPrint.getMiddleRight();
+            case "ringRight" -> fingerPrint.getRingRight();
+            case "littleRight" -> fingerPrint.getLittleRight();
+            default -> null;
+        };
     }
 }
