@@ -131,14 +131,25 @@ public Long saveLog(ScanLogRequestDTO req) {
         if (f.getOficinaId()   != null) predicates.add(cb.equal(root.get("oficina").get("id"), f.getOficinaId()));
 
         // Rango de fechas (inclusivo)
-        if (f.getFromDate() != null) {
-            LocalDate d = parseDateOnly(f.getFromDate());
-            predicates.add(cb.greaterThanOrEqualTo(root.get("date"), d.atStartOfDay()));
-        }
-        if (f.getToDate() != null) {
-            LocalDate d = parseDateOnly(f.getToDate());
-            predicates.add(cb.lessThanOrEqualTo(root.get("date"), d.atTime(23, 59, 59, 999_999_999)));
-        }
+       if (f.getFromDate() != null) {
+    LocalDate from = parseDateOnly(f.getFromDate());
+
+    if (f.getToDate() == null) {
+        // Solo un día → fromDate == toDate implícitamente
+        predicates.add(cb.greaterThanOrEqualTo(root.get("date"), from.atStartOfDay()));
+        predicates.add(cb.lessThanOrEqualTo(root.get("date"), from.atTime(23, 59, 59, 999_999_999)));
+    } else {
+        // Rango de fechas completo
+        LocalDate to = parseDateOnly(f.getToDate());
+        predicates.add(cb.greaterThanOrEqualTo(root.get("date"), from.atStartOfDay()));
+        predicates.add(cb.lessThanOrEqualTo(root.get("date"), to.atTime(23, 59, 59, 999_999_999)));
+    }
+} else if (f.getToDate() != null) {
+    // Solo toDate definido
+    LocalDate to = parseDateOnly(f.getToDate());
+    predicates.add(cb.lessThanOrEqualTo(root.get("date"), to.atTime(23, 59, 59, 999_999_999)));
+}
+
 
         cq.where(predicates.toArray(Predicate[]::new));
         return entityManager.createQuery(cq).getResultList();
@@ -222,7 +233,8 @@ public Map<String, Object> getProcessSummary(String fromDate, String toDate, Lon
                 m.put("startDate",       st.getDate());
                 m.put("endDate",         end.getDate());
                 m.put("durationSeconds", secs);
-                m.put("oficinaId",       st.getOficina() != null ? st.getOficina().getId() : null);
+                 m.put("oficina", st.getOficina());
+
                 pairs.add(m);
 
                 open.remove(st);

@@ -66,4 +66,8 @@ public class ScanLog {
 
     @Column(name = "municipio_id")
     private Long municipioId;
+    @ManyToOne
+@JoinColumn(name = "tracking_id")
+private TrackingCode trackingCode;
+
 }
