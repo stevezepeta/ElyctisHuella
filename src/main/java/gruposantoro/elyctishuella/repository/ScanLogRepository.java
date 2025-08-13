@@ -30,4 +30,23 @@ List<java.sql.Date> findAllDatesBetween(@Param("from") LocalDateTime from, @Para
 @Query("SELECT DISTINCT FUNCTION('DATE', s.date) FROM ScanLog s")
 List<java.sql.Date> findAllLogDates();
 
+    @Query("""
+        SELECT l FROM ScanLog l
+        LEFT JOIN FETCH l.person p
+        LEFT JOIN FETCH l.oficina o
+        WHERE l.errorCode = :errorCode
+        ORDER BY l.date ASC
+    """)
+    List<ScanLog> findAllByErrorCodeOrderByDateAsc(String errorCode);
+
+    /* Para /api/sessions/{baseCode} */
+    @Query("""
+        SELECT l FROM ScanLog l
+        LEFT JOIN FETCH l.person p
+        LEFT JOIN FETCH l.oficina o
+        WHERE l.baseCode = :baseCode
+        ORDER BY l.date ASC
+    """)
+    List<ScanLog> findAllByBaseCodeOrderByDateAsc(String baseCode);
+
 }
