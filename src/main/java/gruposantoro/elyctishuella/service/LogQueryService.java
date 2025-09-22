@@ -7,10 +7,12 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.model.ScanLog;
 import gruposantoro.elyctishuella.model.dto.ErrorCodeResponseDTO;
 import gruposantoro.elyctishuella.model.dto.ScanEventDTO;
 import gruposantoro.elyctishuella.model.dto.SessionResponseDTO;
+import gruposantoro.elyctishuella.model.dto.SessionUserDTO;
 import gruposantoro.elyctishuella.repository.ScanLogRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -61,6 +63,16 @@ public class LogQueryService {
             }
         }
 
+        // ===== Usuario de la sesión (tabla person) =====
+        Person person = logs.stream()
+                .map(ScanLog::getPerson)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+
+        Long userId = (person != null ? person.getId() : null);
+        SessionUserDTO user = (person != null ? mapUser(person) : null);
+
         return SessionResponseDTO.builder()
                 .baseCode(baseCode)
                 .count(events.size())
@@ -71,6 +83,8 @@ public class LogQueryService {
                 .starts(starts)
                 .ends(ends)
                 .errors(errors)
+                .userId(userId)   // ← agregado
+                .user(user)       // ← agregado
                 .events(events)
                 .build();
     }
@@ -89,12 +103,9 @@ public class LogQueryService {
 
         if (l.getOficina() != null) {
             d.setOficinaId(l.getOficina().getId());
-            // Ajusta si el campo en Oficina se llama distinto
             try {
                 d.setOficinaNombre(l.getOficina().getNombre());
-            } catch (Exception ignore) {
-                // si no existe, lo dejamos en null
-            }
+            } catch (Exception ignore) { /* opcional */ }
         }
 
         d.setErrorCode(l.getErrorCode());
@@ -103,4 +114,29 @@ public class LogQueryService {
         d.setTrackingId(l.getTrackingCode() != null ? l.getTrackingCode().getId() : null);
         return d;
     }
+
+    /* ================= Helpers ================= */
+
+    /** Mapea Person → SessionUserDTO con los campos reales de la tabla person. */
+    private SessionUserDTO mapUser(Person p) {
+        String nombres = safe(p.getNombres());
+        String a1 = safe(p.getPrimerApellido());
+        String a2 = safe(p.getSegundoApellido());
+        String nombreCompleto = (nombres + " " + a1 + " " + a2).trim().replaceAll("\\s+", " ");
+
+        return SessionUserDTO.builder()
+                .id(p.getId())
+                .curp(p.getCurp())
+                .nombres(nombres.isEmpty() ? null : nombres)
+                .primerApellido(a1.isEmpty() ? null : a1)
+                .segundoApellido(a2.isEmpty() ? null : a2)
+                .nombreCompleto(nombreCompleto.isBlank() ? null : nombreCompleto)
+                .sexo(p.getSexo())
+                .nacionalidad(p.getNacionalidad())
+                .fechaNacimiento(p.getFechaNacimiento())
+                .direccion(p.getDireccion())
+                .build();
+    }
+
+    private String safe(String s) { return s == null ? "" : s.trim(); }
 }

@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soporte Técnico - Grupo Santoro</title>
+    <style>
+        /* Reset y variables CSS */
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2rem;
+            height: 2rem;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .support-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--success-color);
+            font-weight: 500;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem 0;
+        }
+
+        /* Error Alert */
+        .error-alert {
+            background: var(--bg-primary);
+            border: 1px solid #fed7d7;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            animation: slideInDown 0.5s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-content {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+
+        .alert-icon {
+            background: linear-gradient(135deg, #fed7d7, #feb2b2);
+            border-radius: 50%;
+            width: 4rem;
+            height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.5rem;
+            color: var(--error-color);
+        }
+
+        .alert-text {
+            flex: 1;
+        }
+
+        .alert-text h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--error-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-text p {
+            color: var(--text-secondary);
+        }
+
+        .alert-code {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: 2px dashed var(--border-color);
+        }
+
+        .code-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .code-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--error-color);
+            background: var(--bg-primary);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--error-color);
+        }
+
+        /* Support Panel */
+        .support-panel {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: slideInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .panel-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .panel-header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        /* Panel Grid */
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Info Cards */
+        .info-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-icon {
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            width: 1.5rem;
+            text-align: center;
+        }
+
+        .card-header h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        /* Detail Rows */
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: var(--bg-primary);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        }
+
+        /* Solutions */
+        .solution-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .solution-item:hover {
+            border-color: var(--primary-color);
+        }
+
+        .solution-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .solution-icon {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--primary-color);
+        }
+
+        .solution-content h4 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .solution-content p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .action-btn.secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .action-btn.secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary-color);
+        }
+
+        .contact-btn {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+            margin-top: 1rem;
+        }
+
+        .contact-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Contact Methods */
+        .contact-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-method {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .contact-method-icon {
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            width: 1.5rem;
+            text-align: center;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .contact-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .contact-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Contact Card Special Styling */
+        .contact-card {
+            grid-column: 1 / -1;
+        }
+
+        /* Status Footer */
+        .status-footer {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-lg);
+            animation: slideInUp 0.8s ease-out 0.4s both;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-icon.online {
+            color: var(--success-color);
+        }
+
+        .status-icon.offline {
+            color: var(--error-color);
+        }
+
+        .status-icon.warning {
+            color: var(--warning-color);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Notificaciones */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1001;
+            max-width: 300px;
+            font-weight: 500;
+            animation: slideInRight 0.3s ease;
+        }
+
+        .notification.success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .notification.error {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .notification.info {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .panel-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1.5rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .alert-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .status-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .action-buttons {
+                gap: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">🛡️</div>
+                    <h1>Grupo Santoro</h1>
+                </div>
+                <div class="header-info">
+                    <span class="support-label">Soporte Técnico</span>
+                    <span class="live-indicator">
+                        <div class="live-dot"></div>
+                        En línea
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Error Alert -->
+            <div class="error-alert" id="errorAlert">
+                <div class="alert-content">
+                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-text">
+                        <h3 id="errorTitle">Error del Sistema Detectado</h3>
+                        <p id="errorMessage">Se ha producido un error en el sistema biométrico.</p>
+                    </div>
+                    <div class="alert-code">
+                        <span class="code-label">Código:</span>
+                        <span class="code-value" id="errorCode">ERR001</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Panel -->
+            <div class="support-panel">
+                <div class="panel-header">
+                    <h2>🛠️ Centro de Ayuda</h2>
+                    <p>Información detallada del error y soluciones recomendadas</p>
+                </div>
+
+                <div class="panel-grid">
+                    <!-- Error Details -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <span class="card-icon">ℹ️</span>
+                            <h3>Detalles del Error</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="detail-row">
+                                <span class="detail-label">Sesión:</span>
+                                <span class="detail-value" id="sessionInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Dispositivo:</span>
+                                <span class="detail-value" id="deviceInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Usuario:</span>
+                                <span class="detail-value" id="userInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Timestamp:</span>
+                                <span class="detail-value" id="timestampInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Severidad:</span>
+                                <span class="detail-value" id="severityInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Módulo:</span>
+                                <span class="detail-value" id="moduleInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Detalles:</span>
+                                <span class="detail-value" id="detailsInfo" style="max-width: 200px; word-wrap: break-word; white-space: normal;">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Oficina:</span>
+                                <span class="detail-value" id="oficinaInfo">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Scanner:</span>
+                                <span class="detail-value" id="scannerInfo" style="max-width: 200px; word-wrap: break-word; white-space: normal;">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Eventos:</span>
+                                <span class="detail-value" id="eventCountInfo">N/A</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Solutions -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <span class="card-icon">🔧</span>
+                            <h3>Soluciones Recomendadas</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="solution-list" id="solutionsList">
+                                <!-- Las soluciones se cargarán dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <span class="card-icon">🚀</span>
+                            <h3>Acciones Rápidas</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="action-buttons">
+                                <button class="action-btn primary" onclick="restartApplication()">
+                                    🔄 Reiniciar Aplicación
+                                </button>
+                                <button class="action-btn secondary" onclick="checkSystemStatus()">
+                                    🩺 Verificar Sistema
+                                </button>
+                                <button class="action-btn secondary" onclick="downloadLogs()">
+                                    📥 Descargar Logs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Support -->
+                    <div class="info-card contact-card">
+                        <div class="card-header">
+                            <span class="card-icon">🎧</span>
+                            <h3>Contactar Soporte</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="contact-methods">
+                                <div class="contact-method">
+                                    <span class="contact-method-icon">📞</span>
+                                    <div class="contact-info">
+                                        <span class="contact-label">Teléfono</span>
+                                        <span class="contact-value">+52 55 1234-5678</span>
+                                    </div>
+                                </div>
+                                <div class="contact-method">
+                                    <span class="contact-method-icon">📧</span>
+                                    <div class="contact-info">
+                                        <span class="contact-label">Email</span>
+                                        <span class="contact-value">soporte@gruposantoro.com</span>
+                                    </div>
+                                </div>
+                                <div class="contact-method">
+                                    <span class="contact-method-icon">🕒</span>
+                                    <div class="contact-info">
+                                        <span class="contact-label">Horario</span>
+                                        <span class="contact-value">Lun-Vie 8:00-18:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="action-btn contact-btn" onclick="openTicket()">
+                                🎫 Abrir Ticket de Soporte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Footer -->
+            <div class="status-footer">
+                <div class="status-item">
+                    <span class="status-icon online">🟢</span>
+                    <span>Servidor Principal: <strong>Online</strong></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon online">🟢</span>
+                    <span>Base de Datos: <strong>Online</strong></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon warning">🟡</span>
+                    <span>Sistema Biométrico: <strong id="biometricStatus">Verificando...</strong></span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Analizando error y cargando soluciones...</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuración y variables globales
+        const API_BASE_URL = 'http://187.188.66.56:8024';
+        let currentErrorData = {};
+
+        // Base de datos de soluciones por código de error
+        const errorSolutions = {
+            'ERR001': [
+                {
+                    icon: '🔄',
+                    title: 'Reiniciar Scanner Biométrico',
+                    description: 'Desconecte y reconecte el dispositivo scanner, luego reinicie la aplicación.'
+                },
+                {
+                    icon: '🔌',
+                    title: 'Verificar Conexión USB',
+                    description: 'Asegúrese de que el cable USB esté correctamente conectado y el dispositivo reconocido.'
+                }
+            ],
+            'ERR002': [
+                {
+                    icon: '🌐',
+                    title: 'Verificar Conexión de Red',
+                    description: 'Compruebe la conexión a internet y el acceso al servidor de base de datos.'
+                },
+                {
+                    icon: '🖥️',
+                    title: 'Estado del Servidor',
+                    description: 'El servidor principal puede estar experimentando problemas temporales.'
+                }
+            ],
+            'SYS001': [
+                {
+                    icon: '⚙️',
+                    title: 'Error de Sistema',
+                    description: 'Se ha detectado un error interno del sistema. Intente reiniciar la aplicación.'
+                },
+                {
+                    icon: '📋',
+                    title: 'Revisar Logs',
+                    description: 'Consulte los archivos de registro para obtener más información sobre el error.'
+                }
+            ],
+            'END': [
+                {
+                    icon: '✅',
+                    title: 'Sesión Finalizada Correctamente',
+                    description: 'La sesión ha terminado de manera normal. No se requiere acción.'
+                },
+                {
+                    icon: '📊',
+                    title: 'Revisar Estadísticas',
+                    description: 'Puede revisar los detalles de la sesión y eventos generados.'
+                }
+            ],
+            'START': [
+                {
+                    icon: '🚀',
+                    title: 'Sesión Iniciada',
+                    description: 'La sesión ha comenzado correctamente. Sistema operativo.'
+                },
+                {
+                    icon: '🔍',
+                    title: 'Monitorear Actividad',
+                    description: 'El sistema está monitoreando la actividad de la sesión activa.'
+                }
+            ],
+            'default': [
+                {
+                    icon: '❓',
+                    title: 'Error Desconocido',
+                    description: 'Se ha producido un error no identificado. Contacte al soporte técnico.'
+                },
+                {
+                    icon: '📥',
+                    title: 'Descargar Logs',
+                    description: 'Descargue los archivos de registro y envíelos al equipo de soporte.'
+                }
+            ]
+        };
+
+        // Inicialización cuando la página carga
+        document.addEventListener('DOMContentLoaded', function() {
+            showLoadingOverlay();
+            parseUrlParameters();
+            // El hideLoadingOverlay() se manejará en las funciones de procesamiento
+        });
+
+        // Función para mostrar/ocultar overlay de carga
+        function showLoadingOverlay() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoadingOverlay() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // Función para animar contenido
+        function animateContent() {
+            const cards = document.querySelectorAll('.info-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.5s ease';
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 200);
+            });
+        }
+
+        // Función para parsear parámetros de URL o JSON
+        function parseUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Intentar leer JSON completo si existe
+            const jsonData = urlParams.get('json');
+            if (jsonData) {
+                try {
+                    const parsedData = JSON.parse(decodeURIComponent(jsonData));
+                    processBackendResponse(parsedData);
+                } catch (e) {
+                    console.warn('Error parsing JSON data, using URL params:', e);
+                    parseUrlParams();
+                }
+            } else {
+                // Si no hay JSON, hacer petición al backend con parámetros de URL
+                const code = urlParams.get('code');
+                const device = urlParams.get('device');
+                const user = urlParams.get('user');
+                
+                if (code) {
+                    fetchErrorFromBackend(code, device, user);
+                } else {
+                    parseUrlParams();
+                }
+            }
+        }
+
+        // Función para hacer petición al backend
+        async function fetchErrorFromBackend(code, device, user) {
+            try {
+                showLoadingOverlay();
+                const response = await fetch(`${API_BASE_URL}/support?code=${encodeURIComponent(code || '')}&device=${encodeURIComponent(device || '')}&user=${encodeURIComponent(user || '')}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    processBackendResponse(data);
+                } else {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error fetching data from backend:', error);
+                showNotification('Error al cargar datos del servidor. Usando datos locales.', 'error');
+                parseUrlParams();
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // Función para procesar respuesta del backend
+        function processBackendResponse(data) {
+            if (data.status === 'ok' && data.error) {
+                const errorInfo = data.error;
+                const userInfo = data.query?.user;
+                const lastEvent = errorInfo.events && errorInfo.events.length > 0 ? errorInfo.events[errorInfo.events.length - 1] : null;
+                
+                currentErrorData = {
+                    code: errorInfo.errorCode || data.query?.code || 'UNKNOWN',
+                    session: lastEvent?.sessionToken || data.query?.session || 'N/A',
+                    device: lastEvent?.device || data.query?.device || 'N/A',
+                    user: userInfo ? `${userInfo.nombreCompleto} (${userInfo.curp})` : 'N/A',
+                    timestamp: lastEvent?.date ? new Date(lastEvent.date).toLocaleString('es-ES') : new Date().toLocaleString('es-ES'),
+                    severity: determineErrorSeverity(lastEvent?.type || 'UNKNOWN'),
+                    module: lastEvent?.process || 'Sistema',
+                    details: lastEvent?.message || errorInfo.message || 'Sin detalles adicionales',
+                    // Datos adicionales para referencia
+                    eventCount: errorInfo.count || 1,
+                    firstSeen: errorInfo.firstSeen,
+                    lastSeen: errorInfo.lastSeen,
+                    oficina: lastEvent?.oficinaNombre || 'No especificada',
+                    scanDevice: lastEvent?.scanDevice || 'No especificado'
+                };
+            } else {
+                // Fallback si la respuesta no tiene la estructura esperada
+                console.warn('Unexpected backend response structure:', data);
+                parseUrlParams();
+                return;
+            }
+            
+            updateErrorDisplay();
+            updateErrorDetails();
+            loadSolutions();
+            hideLoadingOverlay();
+            animateContent();
+        }
+
+        // Función para determinar severidad del error
+        function determineErrorSeverity(type) {
+            switch(type) {
+                case 'ERROR':
+                case 'CRITICAL':
+                    return 'HIGH';
+                case 'WARNING':
+                case 'WARN':
+                    return 'MEDIUM';
+                case 'INFO':
+                case 'END':
+                case 'START':
+                    return 'LOW';
+                default:
+                    return 'MEDIUM';
+            }
+        }
+
+        // Función auxiliar para parámetros simples
+        function parseUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentErrorData = {
+                code: urlParams.get('code') || 'NOSESSION08141107-ERR001',
+                session: urlParams.get('session') || 'N/A',
+                device: urlParams.get('device') || 'N/A',
+                user: urlParams.get('user') || 'N/A',
+                timestamp: new Date().toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }),
+                severity: 'MEDIUM',
+                module: 'Sistema',
+                details: 'Error del sistema biométrico'
+            };
+            
+            updateErrorDisplay();
+            updateErrorDetails();
+            loadSolutions();
+            hideLoadingOverlay();
+            animateContent();
+        }
+
+        // Función para actualizar la visualización del error
+        function updateErrorDisplay() {
+            const errorCode = document.getElementById('errorCode');
+            const errorTitle = document.getElementById('errorTitle');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            errorCode.textContent = currentErrorData.code;
+            
+            // Determinar tipo de error y mensaje basado en el código y detalles
+            if (currentErrorData.code.includes('-END') || (currentErrorData.details && currentErrorData.details.includes('terminada'))) {
+                errorTitle.textContent = 'Sesión Finalizada';
+                errorMessage.textContent = 'La sesión de usuario ha finalizado correctamente.';
+            } else if (currentErrorData.code.includes('-START') || (currentErrorData.details && currentErrorData.details.includes('iniciada'))) {
+                errorTitle.textContent = 'Sesión Iniciada';
+                errorMessage.textContent = 'Se ha iniciado una nueva sesión de usuario en el sistema.';
+            } else if (currentErrorData.code.includes('ERR')) {
+                errorTitle.textContent = 'Error del Sistema Detectado';
+                errorMessage.textContent = 'Se ha producido un error en el sistema biométrico que requiere atención.';
+            } else if (currentErrorData.code.includes('SYS')) {
+                errorTitle.textContent = 'Error de Sistema Interno';
+                errorMessage.textContent = 'Error interno del sistema que está siendo procesado automáticamente.';
+            } else {
+                errorTitle.textContent = 'Evento del Sistema';
+                errorMessage.textContent = 'Se ha registrado un evento que requiere revisión.';
+            }
+        }
+
+        // Función para actualizar detalles del error
+        function updateErrorDetails() {
+            document.getElementById('sessionInfo').textContent = currentErrorData.session || 'Sin sesión activa';
+            document.getElementById('deviceInfo').textContent = currentErrorData.device || 'Dispositivo no identificado';
+            document.getElementById('userInfo').textContent = currentErrorData.user || 'Usuario no identificado';
+            document.getElementById('timestampInfo').textContent = currentErrorData.timestamp;
+            document.getElementById('severityInfo').textContent = currentErrorData.severity || 'MEDIUM';
+            document.getElementById('moduleInfo').textContent = currentErrorData.module || 'Sistema';
+            document.getElementById('detailsInfo').textContent = currentErrorData.details || 'Sin detalles adicionales';
+            document.getElementById('oficinaInfo').textContent = currentErrorData.oficina || 'N/A';
+            document.getElementById('scannerInfo').textContent = currentErrorData.scanDevice || 'N/A';
+            document.getElementById('eventCountInfo').textContent = currentErrorData.eventCount ? `${currentErrorData.eventCount} evento(s)` : 'N/A';
+        }
+
+        // Función para cargar soluciones basadas en el código de error
+        function loadSolutions() {
+            const solutionsList = document.getElementById('solutionsList');
+            const errorType = extractErrorType(currentErrorData.code);
+            const solutions = errorSolutions[errorType] || errorSolutions['default'];
+            
+            solutionsList.innerHTML = '';
+            
+            solutions.forEach((solution, index) => {
+                const solutionElement = document.createElement('div');
+                solutionElement.className = 'solution-item';
+                solutionElement.style.animationDelay = `${index * 0.1}s`;
+                
+                solutionElement.innerHTML = `
+                    <div class="solution-icon">
+                        ${solution.icon}
+                    </div>
+                    <div class="solution-content">
+                        <h4>${solution.title}</h4>
+                        <p>${solution.description}</p>
+                    </div>
+                `;
+                
+                solutionsList.appendChild(solutionElement);
+            });
+        }
+
+        // Función para extraer tipo de error del código
+        function extractErrorType(errorCode) {
+            if (errorCode.includes('-ERR001')) return 'ERR001';
+            if (errorCode.includes('-ERR002')) return 'ERR002';
+            if (errorCode.includes('-SYS001')) return 'SYS001';
+            if (errorCode.includes('-END')) return 'END';
+            if (errorCode.includes('-START')) return 'START';
+            // También verificar por el type del currentErrorData si está disponible
+            if (currentErrorData.module === 'SESSION' && currentErrorData.details.includes('terminada')) return 'END';
+            if (currentErrorData.module === 'SESSION' && currentErrorData.details.includes('iniciada')) return 'START';
+            return 'default';
+        }
+
+        // Funciones para acciones rápidas
+        function restartApplication() {
+            showNotification('Enviando comando de reinicio...', 'info');
+            
+            // Simular llamada a API para reiniciar aplicación
+            setTimeout(() => {
+                showNotification('Comando enviado exitosamente. La aplicación se reiniciará.', 'success');
+            }, 2000);
+        }
+
+        function checkSystemStatus() {
+            showNotification('Verificando estado del sistema...', 'info');
+            
+            // Simular verificación del sistema
+            setTimeout(() => {
+                updateSystemStatus();
+                showNotification('Verificación completada. Ver estado abajo.', 'success');
+            }, 3000);
+        }
+
+        function downloadLogs() {
+            showNotification('Preparando descarga de logs...', 'info');
+            
+            // Crear un enlace de descarga simulado
+            const logContent = generateLogFile();
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sistema-logs-${currentErrorData.code}-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Logs descargados exitosamente.', 'success');
+        }
+
+        function openTicket() {
+            showNotification('Abriendo formulario de ticket...', 'info');
+            
+            // Crear URL del ticket con información pre-completada
+            const ticketUrl = `${API_BASE_URL}/support/ticket?code=${encodeURIComponent(currentErrorData.code)}&device=${encodeURIComponent(currentErrorData.device)}&user=${encodeURIComponent(currentErrorData.user)}`;
+            
+            window.open(ticketUrl, '_blank');
+        }
+
+        // Función para generar archivo de logs
+        function generateLogFile() {
+            return `
+GRUPO SANTORO - REPORTE DE LOGS DEL SISTEMA
+============================================
+
+Información del Error:
+- Código: ${currentErrorData.code}
+- Sesión: ${currentErrorData.session}
+- Dispositivo: ${currentErrorData.device}
+- Usuario: ${currentErrorData.user}
+- Timestamp: ${currentErrorData.timestamp}
+
+Información del Sistema:
+- User Agent: ${navigator.userAgent}
+- URL: ${window.location.href}
+- Resolución: ${screen.width}x${screen.height}
+- Memoria disponible: ${navigator.deviceMemory || 'No disponible'} GB
+
+Estado de Conexión:
+- Estado de red: ${navigator.onLine ? 'Conectado' : 'Desconectado'}
+- Tipo de conexión: ${navigator.connection?.effectiveType || 'No disponible'}
+
+Logs adicionales serían incluidos por el sistema backend...
+            `.trim();
+        }
+
+        // Función para actualizar estado del sistema
+        function updateSystemStatus() {
+            const biometricStatus = document.getElementById('biometricStatus');
+            biometricStatus.textContent = 'Requiere Atención';
+            biometricStatus.style.color = 'var(--warning-color)';
+        }
+
+        // Función para mostrar notificaciones
+        function showNotification(message, type = 'info') {
+            // Crear elemento de notificación
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            notification.innerHTML = `${icon} <span>${message}</span>`;
+            
+            document.body.appendChild(notification);
+            
+            // Remover la notificación después de 4 segundos
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        // Función para manejar errores de red
+        window.addEventListener('error', function(e) {
+            console.error('Error en la página:', e.error);
+        });
+
+        // Función para manejar cambios de conectividad
+        window.addEventListener('online', function() {
+            showNotification('Conexión a internet restaurada', 'success');
+        });
+
+        window.addEventListener('offline', function() {
+            showNotification('Conexión a internet perdida', 'error');
+        });
+    </script>
+</body>
+</html>

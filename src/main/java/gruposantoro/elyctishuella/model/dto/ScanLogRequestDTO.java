@@ -16,4 +16,7 @@ public class ScanLogRequestDTO {
     private Long oficinaId;         // ✔️ Único ID de ubicación
     private Long trackingId;  // nuevo campo
 
+      private String errorCode;       
+    private String sessionToken;    
+    private String baseCode;
 }

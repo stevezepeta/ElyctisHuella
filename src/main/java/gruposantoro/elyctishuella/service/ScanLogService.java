@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import gruposantoro.elyctishuella.model.Oficina;
 import gruposantoro.elyctishuella.model.Person;
 import gruposantoro.elyctishuella.model.ScanLog;
+import gruposantoro.elyctishuella.model.TrackingCode;
 import gruposantoro.elyctishuella.model.dto.ScanLogFilterDTO;
 import gruposantoro.elyctishuella.model.dto.ScanLogRequestDTO;
 import gruposantoro.elyctishuella.repository.OficinaRepository;
@@ -57,9 +58,8 @@ public class ScanLogService {
     /* ════════════════════════ CREATE ════════════════════════ */
 
     /** Persiste un log y devuelve el ID generado. */
-   @Transactional
+  @Transactional
 public Long saveLog(ScanLogRequestDTO req) {
-
     /* 1️⃣  Fecha/hora del evento */
     LocalDateTime scanDate = parseDateTime(req.getScanDate());
 
@@ -68,11 +68,11 @@ public Long saveLog(ScanLogRequestDTO req) {
     if (req.getOficinaId() == null) {
         throw new RuntimeException("oficinaId es obligatorio (use –1 si no aplica)");
     }
-    if (req.getOficinaId() > 0) {                       // sólo valida si es > 0
+    if (req.getOficinaId() > 0) { // valida solo si es > 0
         oficina = oficinaRepository.findById(req.getOficinaId())
                 .orElseThrow(() ->
                         new RuntimeException("Oficina con id %d no existe"
-                                             .formatted(req.getOficinaId())));
+                                .formatted(req.getOficinaId())));
     }
     // cuando es –1, oficina queda null
 
@@ -85,9 +85,32 @@ public Long saveLog(ScanLogRequestDTO req) {
     log.setProcess(req.getProcess());
     log.setMessage(req.getMessage());
 
-    // ---- Oficina y campos territoriales solo si existe ----
+    // ── NUEVO: errorCode / sessionToken / baseCode ──
+    String errorCode  = req.getErrorCode()    != null ? req.getErrorCode().trim().toUpperCase() : null;
+    String sessionTok = req.getSessionToken() != null ? req.getSessionToken().trim()            : null;
+    String baseCode   = req.getBaseCode()     != null ? req.getBaseCode().trim().toUpperCase()  : null;
+
+    // Si no mandan baseCode pero sí errorCode, lo derivamos: "USR...-ERR###" → "USR..."
+    if (baseCode == null && errorCode != null) {
+        int i = errorCode.indexOf("-ERR");
+        if (i > 0) baseCode = errorCode.substring(0, i);
+    }
+
+    log.setErrorCode(errorCode);
+    log.setSessionToken(sessionTok);
+    log.setBaseCode(baseCode);
+
+    // ── NUEVO: trackingId → relación ManyToOne TrackingCode ──
+    if (req.getTrackingId() != null && req.getTrackingId() > 0) {
+        // Evita repo adicional: referencia perezosa; fallará en flush si no existe el id
+        TrackingCode tcRef = entityManager.getReference(TrackingCode.class, req.getTrackingId());
+        log.setTrackingCode(tcRef);
+    }
+
+    // Oficina y campos territoriales solo si existe
     if (oficina != null) {
         log.setOficina(oficina);
+        // Si tu entidad Oficina tiene estos campos, los denormalizamos:
         log.setPaisId(oficina.getPaisId());
         log.setEstadoId(oficina.getEstadoId());
         log.setMunicipioId(oficina.getMunicipioId());
@@ -96,15 +119,16 @@ public Long saveLog(ScanLogRequestDTO req) {
     /* 4️⃣  Persona (opcional) */
     if (req.getPersonId() != null && req.getPersonId() > 0) {
         Person p = personRepository.findById(req.getPersonId())
-                                   .orElseThrow(() ->
-                                           new RuntimeException("Persona con id %d no existe"
-                                                                .formatted(req.getPersonId())));
+                .orElseThrow(() ->
+                        new RuntimeException("Persona con id %d no existe"
+                                .formatted(req.getPersonId())));
         log.setPerson(p);
     }
 
     /* 5️⃣  Persistir y devolver id */
     return scanLogRepository.save(log).getId();
 }
+
 
     /* ════════════════════════ FILTER ════════════════════════ */
 

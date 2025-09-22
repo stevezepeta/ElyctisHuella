@@ -1,3 +1,4 @@
+// src/main/java/gruposantoro/elyctishuella/model/dto/SessionResponseDTO.java
 package gruposantoro.elyctishuella.model.dto;
 
 import java.time.LocalDateTime;
@@ -14,9 +15,14 @@ public class SessionResponseDTO {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private Long durationSeconds; // null si no se puede calcular
-    private boolean completed;    // true si hay START y END
+    private boolean completed;
     private int starts;
     private int ends;
     private int errors;
-    private List<ScanEventDTO> events; // ordenados ASC por fecha
+
+    // NUEVO
+    private Long userId;
+    private SessionUserDTO user;
+
+    private List<ScanEventDTO> events;
 }
