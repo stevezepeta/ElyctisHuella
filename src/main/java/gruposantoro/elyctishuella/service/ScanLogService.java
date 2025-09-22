@@ -305,4 +305,10 @@ public Map<String, Object> getProcessSummary(String fromDate, String toDate, Lon
                Objects.equals(a.getDevice(),  b.getDevice()) &&
                Objects.equals(a.getProcess(), b.getProcess());
     }
+    public List<Map<String, Object>> getProcessSummaryArray(String fromDate, String toDate, Long oficinaId) {
+    Map<String, Object> full = getProcessSummary(fromDate, toDate, oficinaId);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> pairs = (List<Map<String, Object>>) full.get("matchedLogs");
+    return pairs; // <- solo el arreglo de objetos
+}
 }
