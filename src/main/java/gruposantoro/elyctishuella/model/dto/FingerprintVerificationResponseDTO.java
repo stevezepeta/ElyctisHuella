@@ -12,4 +12,6 @@ public class FingerprintVerificationResponseDTO {
     private String nombreCompleto;
     private Long id;
     private Long oficinaId;
+     private String status; // "MATCH" | "NO_MATCH" | "NO_FINGERPRINTS"
+    private boolean allowPasswordFallback;
 }

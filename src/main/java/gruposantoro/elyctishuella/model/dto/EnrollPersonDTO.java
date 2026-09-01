@@ -16,5 +16,5 @@ public class EnrollPersonDTO {
     private String sexo;
     private String nacionalidad;
     private String direccion;
-
+private String password;
 }

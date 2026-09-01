@@ -50,5 +50,5 @@ public class Person {
     @Column(name = "direccion")
     private String direccion;
 
-
+private String password;
 }

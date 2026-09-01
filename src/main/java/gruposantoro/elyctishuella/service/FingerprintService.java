@@ -39,9 +39,8 @@ public class FingerprintService {
     private final BigDecimal THRESHOLD;
     private final BigDecimal MAX_SCORE = new BigDecimal("120.00");
     private final BigDecimal MAX_PERCENTAGE = new BigDecimal("100.00");
-    private final BigDecimal MULTIPLIER = MAX_PERCENTAGE.divide(MAX_SCORE, RoundingMode.HALF_DOWN);
+    private final BigDecimal MULTIPLIER = MAX_PERCENTAGE.divide(MAX_SCORE, 6, RoundingMode.HALF_DOWN);
 
-    // Constructor con @Value para inyectar propiedades
     public FingerprintService(
             @Value("${guyana.threshold:80}") short threshold,
             @Value("${face.photo.directory}") String facePhotoDirectory,
@@ -52,31 +51,60 @@ public class FingerprintService {
         this.personRepository = personRepository;
         this.fingerPrintRepository = fingerPrintRepository;
         this.facePhotoDirectory = facePhotoDirectory;
-        log.info("Threshold set to: " + threshold);
+
+        log.info("Threshold set to: {}", threshold);
         log.info("Ruta para guardar fotos de rostro: {}", facePhotoDirectory);
     }
 
+    // =========================
+    // ENROLL / GUARDADO (opcional)
+    // =========================
     @Transactional
     public void saveFingerprintData(FingerprintDataDTO dto, Map<String, MultipartFile> filesFingerprint) throws IOException {
         Person person = personRepository.findByCurp(dto.getCurp())
                 .orElseThrow(() -> new IllegalArgumentException("Person not found for CURP: " + dto.getCurp()));
-        // Aquí iría la lógica para guardar las huellas y sus imágenes en la BD
-        // (asocia huellas al person y guarda imágenes usando filesFingerprint)
+
+        // NOTA:
+        // Aquí depende de tu modelo actual (si guardas paths en FingerPrint y las imágenes en disco, etc.)
+        // Por ahora lo dejo como placeholder para no romper tu implementación existente.
+        // Si quieres, me pegas tu entity FingerPrint (campos) y te lo dejo completo con guardado de 10 dedos.
+        log.warn("saveFingerprintData() aún no implementado. Person encontrado: {}", person.getCurp());
     }
 
-    // Convierte una ruta de archivo a bytes
+    // =========================
+    // UTILIDADES
+    // =========================
     private byte[] filePathToBytes(String filePath) {
         try {
             return Files.readAllBytes(Paths.get(filePath));
         } catch (Exception e) {
-            log.error("No se pudo leer la imagen desde la ruta: " + filePath, e);
+            log.error("No se pudo leer la imagen desde la ruta: {}", filePath, e);
             return null;
         }
     }
 
+    private String getFingerprintPath(FingerPrint fingerprints, String finger) {
+        switch (finger) {
+            case "thumbLeft": return fingerprints.getThumbLeft();
+            case "indexLeft": return fingerprints.getIndexLeft();
+            case "middleLeft": return fingerprints.getMiddleLeft();
+            case "ringLeft": return fingerprints.getRingLeft();
+            case "littleLeft": return fingerprints.getLittleLeft();
+            case "thumbRight": return fingerprints.getThumbRight();
+            case "indexRight": return fingerprints.getIndexRight();
+            case "middleRight": return fingerprints.getMiddleRight();
+            case "ringRight": return fingerprints.getRingRight();
+            case "littleRight": return fingerprints.getLittleRight();
+            default: return null;
+        }
+    }
+
+    // =========================
+    // MATCH / COMPARACIÓN
+    // =========================
     /**
      * Compara dos huellas (ambas en bytes) y devuelve el DTO resultado.
-     * Si no hacen match, retorna null.
+     * Si NO hacen match, retorna null.
      */
     public FingerprintResultDTO compareFingerprints(byte[] fingerprint1Bytes, byte[] fingerprint2Bytes) {
         try {
@@ -96,9 +124,7 @@ public class FingerprintService {
             BigDecimal scoreAux = score.compareTo(MAX_SCORE) > 0 ? MAX_SCORE : score;
             BigDecimal percentage = scoreAux.multiply(MULTIPLIER).setScale(2, RoundingMode.HALF_DOWN);
 
-            if (!isMatch) {
-                return null;
-            }
+            if (!isMatch) return null;
 
             FingerprintResultDTO dto = new FingerprintResultDTO();
             dto.setMatch(true);
@@ -111,7 +137,29 @@ public class FingerprintService {
         }
     }
 
-    // ==== MÉTODO PARA VERIFICAR MATCH DE HUELLAS ====
+    /**
+     * Verifica si ENTRÓ al menos un dedo en el request (archivo no null y no vacío).
+     * Útil para el login híbrido (si no hay huellas -> password).
+     */
+    public boolean hasAnyFingerprint(Map<String, MultipartFile> filesBiometric) {
+        if (filesBiometric == null || filesBiometric.isEmpty()) return false;
+
+        String[] fingerKeys = {
+                "thumbLeft", "indexLeft", "middleLeft", "ringLeft", "littleLeft",
+                "thumbRight", "indexRight", "middleRight", "ringRight", "littleRight"
+        };
+
+        for (String finger : fingerKeys) {
+            MultipartFile f = filesBiometric.get(finger);
+            if (f != null && !f.isEmpty()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Verifica biometría contra las huellas guardadas en BD (paths).
+     * Retorna la Person si hay match (cualquier dedo), o null si no hubo match.
+     */
     public Person verifyBiometric(String curp, Map<String, MultipartFile> filesBiometric) throws IOException {
         Optional<Person> personOpt = personRepository.findByCurp(curp);
         if (personOpt.isEmpty()) return null;
@@ -134,46 +182,41 @@ public class FingerprintService {
             if (uploadedFile != null && !uploadedFile.isEmpty() && storedFingerprintPath != null) {
                 byte[] uploadedBytes = uploadedFile.getBytes();
                 byte[] storedBytes = filePathToBytes(storedFingerprintPath);
+
                 if (uploadedBytes != null && storedBytes != null) {
                     FingerprintResultDTO result = compareFingerprints(uploadedBytes, storedBytes);
                     if (result != null && result.isMatch()) {
-                        return person; // Retorna la persona que hizo match
+                        log.info("MATCH biométrico para CURP {} en dedo {} (score={}, %={})",
+                                curp, finger, result.getScore(), result.getPercentage());
+                        return person;
                     }
                 }
             }
         }
-        return null; // Si no hubo coincidencias
+
+        log.warn("NO MATCH biométrico para CURP {}", curp);
+        return null;
     }
 
-    // Utilitario: obtiene la ruta del archivo guardado para cada dedo
-    private String getFingerprintPath(FingerPrint fingerprints, String finger) {
-        switch (finger) {
-            case "thumbLeft": return fingerprints.getThumbLeft();
-            case "indexLeft": return fingerprints.getIndexLeft();
-            case "middleLeft": return fingerprints.getMiddleLeft();
-            case "ringLeft": return fingerprints.getRingLeft();
-            case "littleLeft": return fingerprints.getLittleLeft();
-            case "thumbRight": return fingerprints.getThumbRight();
-            case "indexRight": return fingerprints.getIndexRight();
-            case "middleRight": return fingerprints.getMiddleRight();
-            case "ringRight": return fingerprints.getRingRight();
-            case "littleRight": return fingerprints.getLittleRight();
-            default: return null;
-        }
-    }
-
-    // Guarda o actualiza la foto de rostro y retorna la ruta
+    // =========================
+    // FOTO ROSTRO
+    // =========================
+    /**
+     * Guarda o actualiza la foto de rostro y retorna la ruta.
+     */
     public String saveOrUpdateFacePhoto(Person person, MultipartFile facePhoto) {
         try {
             if (facePhoto != null && !facePhoto.isEmpty()) {
                 File dir = new File(facePhotoDirectory);
                 if (!dir.exists()) dir.mkdirs();
+
                 String filename = person.getCurp() + "_face_" + System.currentTimeMillis() + ".jpg";
                 String path = facePhotoDirectory + File.separator + filename;
 
                 try (FileOutputStream fos = new FileOutputStream(path)) {
                     fos.write(facePhoto.getBytes());
                 }
+
                 log.info("Foto facial guardada/actualizada en: {}", path);
                 return path;
             }

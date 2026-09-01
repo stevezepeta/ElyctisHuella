@@ -33,27 +33,25 @@ public class EnrollCustomerService {
     // === ALTA BIOGRÁFICA ===
     @Transactional
     public Person enrollBiographic(EnrollPersonDTO dto) {
+    Person person = personRepository.findByCurp(dto.getCurp()).orElse(new Person());
 
-        // 1️⃣ Construir persona sin oficina
-        Person person = new Person();
-        person.setCurp(dto.getCurp());
-        person.setNombres(dto.getNombres());
-        person.setPrimerApellido(dto.getPrimerApellido());
-        person.setSegundoApellido(dto.getSegundoApellido());
-        person.setSexo(dto.getSexo());
-        person.setNacionalidad(dto.getNacionalidad());
-        person.setFechaNacimiento(dto.getFechaNacimiento());
-        person.setDireccion(dto.getDireccion());
-        // explícitamente sin oficina
+    person.setCurp(dto.getCurp());
+    person.setNombres(dto.getNombres());
+    person.setPrimerApellido(dto.getPrimerApellido());
+    person.setSegundoApellido(dto.getSegundoApellido());
+    person.setFechaNacimiento(dto.getFechaNacimiento());
+    person.setSexo(dto.getSexo());
+    person.setNacionalidad(dto.getNacionalidad());
+    person.setDireccion(dto.getDireccion());
+    // person.setOficinaId(dto.getOficinaId()); // si aplica
 
-        Person saved = personRepository.save(person);
-
-        log.info("Persona enrolada: {} {} (sin oficina)",
-                 saved.getNombres(),
-                 saved.getPrimerApellido());
-
-        return saved;
+    // ✅ guardar texto plano
+    if (dto.getPassword() != null) {
+        person.setPassword(dto.getPassword().trim());
     }
+
+    return personRepository.save(person);
+}
 
     // === ENROLAMIENTO BIOMÉTRICO con DTO ===
     @Transactional
